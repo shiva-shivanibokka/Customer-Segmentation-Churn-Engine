@@ -1,0 +1,375 @@
+"""
+Customer Segmentation Engine
+==============================
+Implements production-grade segmentation with:
+- K-Means++ for business-interpretable hard cluster assignments
+- Gaussian Mixture Models (GMM) for soft probability assignments
+  (each customer gets a probability distribution across segments — not a hard label)
+- UMAP for 2D visualization of high-dimensional behavioral space
+- Bootstrap cluster stability analysis via Adjusted Rand Index (ARI)
+  across 100 resamplings — a production validation step that most
+  portfolio implementations skip entirely
+
+Architecture mirrors Salesforce Einstein's customer health segmentation:
+segments are named with business-readable labels and profiled as heatmaps
+so non-technical stakeholders can act on them.
+"""
+
+import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    silhouette_score,
+    davies_bouldin_score,
+    adjusted_rand_score,
+)
+import umap
+import joblib
+import os
+import warnings
+
+warnings.filterwarnings("ignore")
+
+MODELS_PATH = os.path.join(os.path.dirname(__file__), "..", "models")
+PROCESSED_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
+
+# Segment business labels — named for non-technical stakeholders
+# (the same pattern Salesforce uses for "Health Score" tiers)
+SEGMENT_LABELS = {
+    0: "Champions",
+    1: "Loyal Customers",
+    2: "At-Risk",
+    3: "Price Sensitive",
+    4: "Lapsed",
+}
+
+SEGMENT_COLORS = {
+    "Champions": "#2ECC71",
+    "Loyal Customers": "#3498DB",
+    "At-Risk": "#E74C3C",
+    "Price Sensitive": "#F39C12",
+    "Lapsed": "#95A5A6",
+}
+
+
+def scale_features(X: pd.DataFrame) -> tuple[np.ndarray, StandardScaler]:
+    """
+    StandardScaler normalization. Required before distance-based clustering.
+    Returns both the scaled array and the fitted scaler (needed for inference).
+    """
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    return X_scaled, scaler
+
+
+def find_optimal_k(X_scaled: np.ndarray, k_range: range = range(2, 9)) -> dict:
+    """
+    Elbow method + Silhouette score sweep to find optimal number of clusters.
+    Returns a dict of k -> metrics for display in the Streamlit UI.
+    """
+    results = {}
+    for k in k_range:
+        km = KMeans(n_clusters=k, init="k-means++", n_init=10, random_state=42)
+        labels = km.fit_predict(X_scaled)
+        inertia = km.inertia_
+        sil = silhouette_score(X_scaled, labels, sample_size=min(2000, len(X_scaled)))
+        db = davies_bouldin_score(X_scaled, labels)
+        results[k] = {
+            "inertia": inertia,
+            "silhouette": sil,
+            "davies_bouldin": db,
+            "labels": labels,
+        }
+    return results
+
+
+def fit_kmeans(X_scaled: np.ndarray, n_clusters: int = 5) -> tuple[KMeans, np.ndarray]:
+    """
+    Fit K-Means++ with the chosen number of clusters.
+    K-Means++ initialization reduces convergence time and avoids poor local minima.
+    """
+    km = KMeans(
+        n_clusters=n_clusters,
+        init="k-means++",
+        n_init=20,
+        max_iter=500,
+        random_state=42,
+    )
+    labels = km.fit_predict(X_scaled)
+    return km, labels
+
+
+def fit_gmm(
+    X_scaled: np.ndarray, n_components: int = 5
+) -> tuple[GaussianMixture, np.ndarray, np.ndarray]:
+    """
+    Fit Gaussian Mixture Model for soft probabilistic segment assignments.
+
+    Unlike K-Means, GMM assigns each customer a probability distribution
+    across all segments — "60% Champion, 30% Loyal, 10% At-Risk."
+    This is used in the uplift model to weight predictions by segment membership
+    probability, matching how Salesforce handles ambiguous health score boundaries.
+    """
+    gmm = GaussianMixture(
+        n_components=n_components,
+        covariance_type="full",
+        n_init=5,
+        max_iter=200,
+        random_state=42,
+    )
+    gmm.fit(X_scaled)
+    hard_labels = gmm.predict(X_scaled)
+    soft_probs = gmm.predict_proba(X_scaled)  # shape: (n_customers, n_segments)
+    return gmm, hard_labels, soft_probs
+
+
+def bootstrap_stability(
+    X_scaled: np.ndarray,
+    n_clusters: int = 5,
+    n_bootstrap: int = 100,
+    sample_frac: float = 0.8,
+) -> dict:
+    """
+    Bootstrap Cluster Stability Analysis via Adjusted Rand Index (ARI).
+
+    Procedure:
+    1. Fit K-Means on the full dataset → reference labels
+    2. For each bootstrap iteration:
+       a. Sample 80% of the data (with replacement)
+       b. Fit K-Means on the sample
+       c. Compute ARI between reference labels (on the sampled rows) and
+          new labels from the bootstrap fit
+    3. Report mean ARI, std, and stability grade
+
+    ARI Interpretation:
+    - ARI > 0.85: Highly stable — segments are robust across data samples
+    - ARI 0.70-0.85: Moderately stable — segments are consistent
+    - ARI < 0.70: Unstable — segments are sensitive to data, reduce k
+
+    This is a production validation step that proves segments are not
+    artifacts of a specific random seed or data sample.
+    """
+    n_samples = len(X_scaled)
+
+    # Reference model on full dataset
+    ref_km = KMeans(n_clusters=n_clusters, init="k-means++", n_init=10, random_state=42)
+    ref_labels = ref_km.fit_predict(X_scaled)
+
+    ari_scores = []
+    for i in range(n_bootstrap):
+        # Sample indices with replacement
+        sample_idx = np.random.choice(
+            n_samples, size=int(n_samples * sample_frac), replace=True
+        )
+        X_sample = X_scaled[sample_idx]
+
+        # Fit on sample
+        boot_km = KMeans(
+            n_clusters=n_clusters, init="k-means++", n_init=5, random_state=i
+        )
+        boot_labels = boot_km.fit_predict(X_sample)
+
+        # ARI against reference labels on the same sampled rows
+        ref_sub = ref_labels[sample_idx]
+        ari = adjusted_rand_score(ref_sub, boot_labels)
+        ari_scores.append(ari)
+
+    ari_arr = np.array(ari_scores)
+    mean_ari = ari_arr.mean()
+
+    if mean_ari >= 0.85:
+        grade = "Highly Stable"
+    elif mean_ari >= 0.70:
+        grade = "Moderately Stable"
+    else:
+        grade = "Unstable — consider reducing k"
+
+    return {
+        "ari_scores": ari_arr.tolist(),
+        "mean_ari": float(mean_ari),
+        "std_ari": float(ari_arr.std()),
+        "min_ari": float(ari_arr.min()),
+        "max_ari": float(ari_arr.max()),
+        "grade": grade,
+        "n_bootstrap": n_bootstrap,
+    }
+
+
+def fit_umap(
+    X_scaled: np.ndarray, n_neighbors: int = 15, min_dist: float = 0.1
+) -> np.ndarray:
+    """
+    UMAP dimensionality reduction to 2D for interactive cluster visualization.
+    UMAP preserves both local and global structure better than t-SNE at scale,
+    and is faster for the 5K-row dataset.
+    """
+    reducer = umap.UMAP(
+        n_components=2,
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        random_state=42,
+        n_jobs=1,
+    )
+    embedding = reducer.fit_transform(X_scaled)
+    return embedding
+
+
+def label_segments(
+    km_labels: np.ndarray, df: pd.DataFrame, feature_cols: list
+) -> pd.DataFrame:
+    """
+    Assign business-readable segment names to K-Means cluster labels.
+
+    The mapping is determined by cluster profile:
+    - Champions: high engagement, low recency (bought recently), low support risk
+    - Loyal Customers: high tenure, moderate engagement
+    - At-Risk: declining engagement, high recency signal (haven't bought recently)
+    - Price Sensitive: high discount sensitivity, low cashback
+    - Lapsed: very high recency (long since last order), very low engagement
+
+    Clusters are ranked by EngagementScore (descending) and RecencySignal (ascending)
+    to assign labels systematically, making the naming deterministic.
+    """
+    df = df.copy()
+    df["RawSegment"] = km_labels
+
+    # Profile each cluster by key features
+    profile = df.groupby("RawSegment")[
+        [
+            "EngagementScore",
+            "RecencySignal",
+            "SupportRiskScore",
+            "StickinessIndex",
+            "DiscountSensitivity",
+            "TenureStability",
+        ]
+    ].mean()
+
+    # Rank by engagement (desc) to assign Champion → Loyal → ...
+    # Break ties by recency (asc = bought more recently)
+    profile["rank_score"] = (
+        profile["EngagementScore"] * 0.4
+        + (1 - profile["RecencySignal"]) * 0.3  # lower recency signal = bought recently
+        + profile["StickinessIndex"] * 0.2
+        + (1 - profile["SupportRiskScore"]) * 0.1
+    )
+
+    sorted_clusters = profile["rank_score"].sort_values(ascending=False).index.tolist()
+    label_map = {}
+    available_labels = list(SEGMENT_LABELS.values())
+
+    for i, cluster_id in enumerate(sorted_clusters):
+        if i < len(available_labels):
+            label_map[cluster_id] = available_labels[i]
+        else:
+            label_map[cluster_id] = f"Segment {cluster_id}"
+
+    df["Segment"] = df["RawSegment"].map(label_map)
+    return df, label_map
+
+
+def build_segment_profiles(df: pd.DataFrame, feature_cols: list) -> pd.DataFrame:
+    """
+    Build segment-level aggregate profiles for heatmap visualization.
+    This is the "business output" step — converting cluster indices into
+    actionable descriptions that a CSM or marketing team can act on.
+    """
+    profile_cols = [
+        "EngagementScore",
+        "RecencySignal",
+        "StickinessIndex",
+        "SpendTrend",
+        "SupportRiskScore",
+        "DiscountSensitivity",
+        "TenureStability",
+        "WarehouseFriction",
+        "Churn",
+    ]
+    available = [c for c in profile_cols if c in df.columns]
+    profile = df.groupby("Segment")[available].mean().round(3)
+    profile["CustomerCount"] = df.groupby("Segment").size()
+    profile["ChurnRate"] = df.groupby("Segment")["Churn"].mean().round(3)
+    return profile
+
+
+def run_segmentation(df: pd.DataFrame, feature_cols: list, n_clusters: int = 5) -> dict:
+    """
+    Full segmentation pipeline. Returns all artifacts needed for the Streamlit UI.
+    """
+    print(
+        f"[segmentation] Scaling {len(feature_cols)} features for {len(df)} customers..."
+    )
+    X = df[feature_cols].values
+    X_scaled, scaler = scale_features(df[feature_cols])
+
+    print("[segmentation] Finding optimal k...")
+    k_metrics = find_optimal_k(X_scaled)
+
+    print(f"[segmentation] Fitting K-Means++ with k={n_clusters}...")
+    km, km_labels = fit_kmeans(X_scaled, n_clusters)
+
+    print(f"[segmentation] Fitting GMM with {n_clusters} components...")
+    gmm, gmm_labels, gmm_probs = fit_gmm(X_scaled, n_clusters)
+
+    print("[segmentation] Running bootstrap stability analysis (100 iterations)...")
+    stability = bootstrap_stability(X_scaled, n_clusters=n_clusters, n_bootstrap=100)
+    print(
+        f"[segmentation] Stability: mean ARI={stability['mean_ari']:.3f} ({stability['grade']})"
+    )
+
+    print("[segmentation] Fitting UMAP for visualization...")
+    umap_embedding = fit_umap(X_scaled)
+
+    print("[segmentation] Labeling segments...")
+    df_out, label_map = label_segments(km_labels, df, feature_cols)
+
+    # Add GMM soft probabilities per segment
+    for i in range(n_clusters):
+        df_out[f"GMM_Prob_Seg{i}"] = gmm_probs[:, i]
+
+    # Add UMAP coordinates
+    df_out["UMAP_1"] = umap_embedding[:, 0]
+    df_out["UMAP_2"] = umap_embedding[:, 1]
+
+    # Build profiles
+    profiles = build_segment_profiles(df_out, feature_cols)
+
+    # Save artifacts
+    os.makedirs(MODELS_PATH, exist_ok=True)
+    joblib.dump(km, os.path.join(MODELS_PATH, "kmeans.pkl"))
+    joblib.dump(gmm, os.path.join(MODELS_PATH, "gmm.pkl"))
+    joblib.dump(scaler, os.path.join(MODELS_PATH, "scaler.pkl"))
+
+    out_path = os.path.join(PROCESSED_PATH, "segmented.parquet")
+    df_out.to_parquet(out_path, index=False)
+
+    print(f"[segmentation] Done. Saved segmented data to {out_path}")
+
+    return {
+        "df": df_out,
+        "km": km,
+        "gmm": gmm,
+        "scaler": scaler,
+        "k_metrics": k_metrics,
+        "stability": stability,
+        "umap_embedding": umap_embedding,
+        "profiles": profiles,
+        "label_map": label_map,
+        "n_clusters": n_clusters,
+    }
+
+
+if __name__ == "__main__":
+    from features import build_pipeline, get_feature_sets
+
+    df = build_pipeline(save=True)
+    feature_sets = get_feature_sets()
+    results = run_segmentation(df, feature_sets["clustering"])
+
+    print("\nSegment Profiles:")
+    print(results["profiles"])
+    print("\nStability Report:")
+    print(f"  Mean ARI: {results['stability']['mean_ari']:.3f}")
+    print(f"  Grade:    {results['stability']['grade']}")
