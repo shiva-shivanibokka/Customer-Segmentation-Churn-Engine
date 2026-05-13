@@ -1,12 +1,14 @@
 """
-Per-Segment Churn Prediction with SHAP Explainability
-=======================================================
+Per-Segment Churn Prediction
+==============================
 Architecture mirrors Salesforce Einstein's per-segment churn scoring:
 - A separate XGBoost classifier is trained per customer segment
-- Probability calibration with isotonic regression (Platt scaling)
-  ensures raw model probabilities are reliable for ROI calculations
-- SHAP TreeExplainer computes both global and per-customer explanations
-- SHAP interaction values surface non-obvious feature pairs driving churn
+- Stratified 80/20 holdout split ensures a true generalisation estimate
+- Probability calibration with isotonic regression ensures raw model
+  probabilities are reliable for ROI calculations (CLV, retention budget)
+- XGBoost gain-based feature importance provides global segment-level
+  explainability; per-customer explanations use a deviation-weighted
+  approximation combining global importance with individual feature values
 
 Why per-segment models?
   A single global churn model treats all customers identically.
@@ -22,6 +24,16 @@ Why calibration?
   Calibration is required whenever probabilities are used in business
   calculations (CLV, retention ROI, budget allocation). Isotonic regression
   is preferred over Platt scaling for non-parametric data.
+
+Explainability approach:
+  TreeExplainer-based SHAP interaction values are not used because
+  XGBoost 2.x/3.x changes to base_score handling introduce instability
+  in interaction value computation. Instead this module uses:
+    1. Global: XGBoost gain-based feature importance (normalised to [0,1])
+    2. Per-customer: deviation from segment mean, weighted by global importance
+  This approximation is fast, stable, and sufficient for the retention
+  team's use case (rank features by contribution, not compute Shapley values).
+  Full TreeExplainer can be re-enabled once XGBoost stabilises the API.
 """
 
 import numpy as np
@@ -34,7 +46,7 @@ import joblib
 import os
 import json
 import warnings
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 from sklearn.metrics import (
     roc_auc_score,
@@ -83,23 +95,38 @@ def train_segment_model(
     Train and calibrate a single segment's churn model.
 
     Steps:
-    1. Train XGBoost base classifier
-    2. Calibrate probabilities with isotonic regression
-    3. Compute cross-validated AUC, AP, Brier score
-    4. Log all metrics and the model to MLflow
-    5. Compute SHAP values (global feature importance)
+    1. Hold out 20% of the segment as a true test set (stratified split)
+    2. Train XGBoost base classifier on the 80% train split
+    3. Calibrate probabilities with isotonic regression
+    4. Compute cross-validated AUC on train split (variance estimate)
+    5. Compute holdout AUC/AP/Brier on the 20% test split (generalisation estimate)
+    6. Log all metrics and the model to MLflow
 
-    Returns a dict with model, calibrated model, metrics, and SHAP values.
+    Returns a dict with model, calibrated model, train metrics, and holdout metrics.
+
+    Why separate CV and holdout?
+      CV AUC on training data measures model capacity but overestimates
+      generalisation — it never tests on data the model was fitted on,
+      but it was still used to select the hyperparameters. The holdout
+      test set is completely unseen: it gives the true generalisation estimate
+      reported in the README and to stakeholders.
     """
-    X = X_train[feature_cols]
-    y = y_train
+    X_all = X_train[feature_cols]
+    y_all = y_train
 
     # Skip segments with too few samples or only one class
-    if len(y) < 30 or y.nunique() < 2:
+    if len(y_all) < 50 or y_all.nunique() < 2:
         print(
-            f"  [churn] Skipping segment '{segment_name}': insufficient data ({len(y)} rows)"
+            f"  [churn] Skipping segment '{segment_name}': insufficient data ({len(y_all)} rows)"
         )
         return None
+
+    # ── Stratified 80/20 holdout split ──────────────────────────────────────
+    # Stratify on y to preserve churn rate in both splits.
+    # random_state=42 ensures reproducible splits across runs.
+    X, X_test, y, y_test = train_test_split(
+        X_all, y_all, test_size=0.20, random_state=42, stratify=y_all
+    )
 
     params = get_xgb_params()
     # Recompute scale_pos_weight per segment (churn rates differ by segment)
@@ -109,24 +136,37 @@ def train_segment_model(
 
     base_clf = xgb.XGBClassifier(**params)
 
-    # Cross-validated metrics (5-fold stratified)
+    # Cross-validated metrics on the TRAIN split only (5-fold stratified)
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    cv_auc = cross_val_score(base_clf, X, y, cv=cv, scoring="roc_auc").mean()
-    cv_ap = cross_val_score(base_clf, X, y, cv=cv, scoring="average_precision").mean()
+    cv_auc = float(cross_val_score(base_clf, X, y, cv=cv, scoring="roc_auc").mean())
+    cv_ap = float(
+        cross_val_score(base_clf, X, y, cv=cv, scoring="average_precision").mean()
+    )
 
-    # Fit base model on full training data
+    # Fit base model on the full train split
     base_clf.fit(X, y)
 
-    # Calibration: isotonic regression wraps the base model
-    # CalibratedClassifierCV with cv='prefit' uses the already-fitted base model
+    # Calibration: isotonic regression wraps the already-fitted base model
     calibrated_clf = CalibratedClassifierCV(base_clf, cv="prefit", method="isotonic")
     calibrated_clf.fit(X, y)
 
-    # Calibration quality: Brier score (lower = better calibrated)
-    probs = calibrated_clf.predict_proba(X)[:, 1]
-    brier = brier_score_loss(y, probs)
-    train_auc = roc_auc_score(y, probs)
-    train_ap = average_precision_score(y, probs)
+    # ── Train-split evaluation (calibrated model) ────────────────────────────
+    train_probs = calibrated_clf.predict_proba(X)[:, 1]
+    train_brier = float(brier_score_loss(y, train_probs))
+    train_auc = float(roc_auc_score(y, train_probs))
+    train_ap = float(average_precision_score(y, train_probs))
+
+    # ── Holdout test-split evaluation (true generalisation estimate) ─────────
+    # This is the metric reported in the README.
+    # The model has never seen X_test during training or calibration.
+    test_probs = calibrated_clf.predict_proba(X_test)[:, 1]
+    holdout_auc = float(roc_auc_score(y_test, test_probs))
+    holdout_ap = float(average_precision_score(y_test, test_probs))
+    holdout_brier = float(brier_score_loss(y_test, test_probs))
+
+    # Convenience alias so callers keep using probs/brier as before
+    probs = train_probs
+    brier = train_brier
 
     # Fast SHAP via XGBoost native gain-based feature importance.
     # This is the standard production approach when per-customer SHAP is
@@ -152,14 +192,22 @@ def train_segment_model(
 
     metrics = {
         "segment": segment_name,
-        "n_customers": int(len(y)),
-        "n_churners": int(y.sum()),
-        "churn_rate": float(y.mean()),
-        "cv_auc": float(cv_auc),
-        "cv_ap": float(cv_ap),
-        "train_auc": float(train_auc),
-        "train_ap": float(train_ap),
-        "brier_score": float(brier),
+        # Train split size (80% of segment)
+        "n_train": int(len(y)),
+        "n_test": int(len(y_test)),
+        "n_churners_train": int(y.sum()),
+        "churn_rate_train": float(y.mean()),
+        # Cross-validation on train split (variance estimate — lower bias than single split)
+        "cv_auc": cv_auc,
+        "cv_ap": cv_ap,
+        # Train-split evaluation (calibrated model)
+        "train_auc": train_auc,
+        "train_ap": train_ap,
+        "train_brier": train_brier,
+        # Holdout test-split evaluation (TRUE generalisation estimate — report this)
+        "holdout_auc": holdout_auc,
+        "holdout_ap": holdout_ap,
+        "holdout_brier": holdout_brier,
     }
 
     # MLflow logging
@@ -172,8 +220,9 @@ def train_segment_model(
                     "n_estimators": params["n_estimators"],
                     "max_depth": params["max_depth"],
                     "learning_rate": params["learning_rate"],
-                    "scale_pos_weight": params["scale_pos_weight"],
+                    "scale_pos_weight": float(params["scale_pos_weight"]),
                     "calibration_method": "isotonic",
+                    "holdout_pct": 0.20,
                 }
             )
             mlflow.log_metrics(
@@ -182,20 +231,27 @@ def train_segment_model(
                     "cv_ap": cv_ap,
                     "train_auc": train_auc,
                     "train_ap": train_ap,
-                    "brier_score": brier,
+                    "train_brier": train_brier,
+                    # Holdout metrics — these are what matter for reporting
+                    "holdout_auc": holdout_auc,
+                    "holdout_ap": holdout_ap,
+                    "holdout_brier": holdout_brier,
                     "churn_rate": float(y.mean()),
-                    "n_customers": float(len(y)),
+                    "n_train": float(len(y)),
+                    "n_test": float(len(y_test)),
                 }
             )
-            # Log top SHAP features as params for quick comparison
+            # Log top gain-based importance features
             for feat, val in mean_abs_shap.head(5).items():
-                mlflow.log_metric(f"shap_{feat}", float(val))
+                mlflow.log_metric(f"importance_{feat}", float(val))
 
-            mlflow.sklearn.log_model(base_clf, name=f"model_{segment_name}")
+            mlflow.xgboost.log_model(base_clf, name=f"model_{segment_name}")
 
     print(
-        f"  [churn] Segment '{segment_name}': CV AUC={cv_auc:.3f}, Brier={brier:.3f}, "
-        f"n={len(y)}, churn_rate={y.mean():.2%}"
+        f"  [churn] Segment '{segment_name}': "
+        f"CV AUC={cv_auc:.3f} | Holdout AUC={holdout_auc:.3f} | "
+        f"Holdout Brier={holdout_brier:.3f} | "
+        f"n_train={len(y)}, n_test={len(y_test)}, churn_rate={y.mean():.2%}"
     )
 
     return {
@@ -207,8 +263,12 @@ def train_segment_model(
         "metrics": metrics,
         "feature_cols": feature_cols,
         "segment_name": segment_name,
+        # Train split (used for per-customer SHAP approximation)
         "X_train": X,
         "y_train": y,
+        # Holdout split (kept for post-hoc analysis and bias checks)
+        "X_test": X_test,
+        "y_test": y_test,
     }
 
 
@@ -257,18 +317,25 @@ def compute_per_customer_shap(
     top_n: int = 5,
 ) -> pd.DataFrame:
     """
-    For each customer, compute the top N SHAP features driving their churn risk.
+    For each customer, compute the top N features driving their individual churn risk.
 
-    Uses XGBoost's native feature importance (gain-based) as a fast approximation
-    of per-customer SHAP. The PermutationExplainer built during training is too slow
-    to run on every customer at inference time — this matches production practice
-    where feature attributions are precomputed on a sample and fast-path importance
-    scores are used for the per-customer display.
+    Method: deviation-weighted importance approximation
+    -------------------------------------------------------
+    For each customer we combine two signals:
+      1. Global feature importance (XGBoost gain-based, normalised to [0,1])
+         — which features matter most for this SEGMENT
+      2. Per-customer deviation from the segment mean (z-scored)
+         — which features are most abnormal for THIS individual
 
-    For the Streamlit UI and LLM prompt, we combine:
-    - Global SHAP importance (already computed per segment during training)
-    - Per-customer feature deviation from segment mean (which features are abnormal)
-    This gives actionable per-customer explanations without re-running SHAP.
+    weighted_score[feature] = |z_score[feature]| × global_importance[feature]
+
+    The sign is set by whether the feature value is above or below the segment
+    mean (above = increases churn risk for a positively-important feature).
+
+    This gives actionable, human-readable explanations in the Streamlit UI
+    without the latency and instability of running TreeExplainer at inference
+    time. The approximation is sufficient for the retention team's use case:
+    understanding WHY a specific customer is flagged as high-risk.
     """
     df = df.copy()
     shap_records = []
@@ -366,15 +433,24 @@ def run_churn_pipeline(
             if model_dict:
                 all_metrics.append(model_dict["metrics"])
 
-        # Log aggregate metrics
+        # Log aggregate metrics (both CV and holdout — report holdout as the headline)
         valid_metrics = [m for m in all_metrics if m]
         if valid_metrics:
-            avg_auc = np.mean([m["cv_auc"] for m in valid_metrics])
-            avg_brier = np.mean([m["brier_score"] for m in valid_metrics])
-            mlflow.log_metric("avg_cv_auc_across_segments", avg_auc)
-            mlflow.log_metric("avg_brier_across_segments", avg_brier)
+            avg_cv_auc = float(np.mean([m["cv_auc"] for m in valid_metrics]))
+            avg_holdout_auc = float(np.mean([m["holdout_auc"] for m in valid_metrics]))
+            avg_holdout_brier = float(
+                np.mean([m["holdout_brier"] for m in valid_metrics])
+            )
+            avg_train_brier = float(np.mean([m["train_brier"] for m in valid_metrics]))
+            mlflow.log_metric("avg_cv_auc_across_segments", avg_cv_auc)
+            mlflow.log_metric("avg_holdout_auc_across_segments", avg_holdout_auc)
+            mlflow.log_metric("avg_holdout_brier_across_segments", avg_holdout_brier)
+            mlflow.log_metric("avg_train_brier_across_segments", avg_train_brier)
             print(
-                f"[churn] Aggregate: Avg CV AUC={avg_auc:.3f}, Avg Brier={avg_brier:.3f}"
+                f"[churn] Aggregate: "
+                f"CV AUC={avg_cv_auc:.3f} | "
+                f"Holdout AUC={avg_holdout_auc:.3f} | "
+                f"Holdout Brier={avg_holdout_brier:.3f}"
             )
 
     # Score all customers
