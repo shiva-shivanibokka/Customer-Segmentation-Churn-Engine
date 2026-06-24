@@ -49,390 +49,275 @@ st.set_page_config(
 def _inject_css():
     st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
 
     /* ── BASE ──────────────────────────────────────────────────────────────── */
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        background: #F0F4FF !important;
-        font-size: 15px !important;
-    }
-    p, li, span, div, label {
-        font-size: 15px !important;
-        line-height: 1.6 !important;
+        background: #F4F6FF !important;
     }
     .main .block-container {
         padding-top: 1.75rem;
         padding-bottom: 3rem;
-        max-width: 1320px;
+        max-width: 1360px;
     }
+    /* Body text — consistent 15px everywhere */
+    p, li, td, th { font-size: 15px !important; line-height: 1.65 !important; }
+    label { font-size: 14px !important; font-weight: 500 !important; }
 
-    /* ── SIDEBAR — vibrant indigo (visible, energetic, not depressing) ──────── */
+    /* ── SIDEBAR — vibrant indigo gradient ─────────────────────────────────── */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(160deg, #3730A3 0%, #4F46E5 60%, #6366F1 100%) !important;
+        background: linear-gradient(175deg, #312E81 0%, #4F46E5 55%, #7C3AED 100%) !important;
         border-right: none !important;
-        box-shadow: 4px 0 24px rgba(79,70,229,0.18) !important;
+        box-shadow: 6px 0 30px rgba(79,70,229,0.22) !important;
     }
-    section[data-testid="stSidebar"] > div {
-        background: transparent !important;
-    }
+    section[data-testid="stSidebar"] > div { background: transparent !important; }
     section[data-testid="stSidebar"] p,
     section[data-testid="stSidebar"] span:not([data-testid]),
     section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] div {
-        color: #E0E7FF !important;
-        font-size: 15px !important;
-    }
+    section[data-testid="stSidebar"] div { color: #DDD6FE !important; font-size: 14px !important; }
     section[data-testid="stSidebar"] h1,
     section[data-testid="stSidebar"] h2,
     section[data-testid="stSidebar"] h3 {
-        color: #FFFFFF !important;
-        border-bottom: none !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.1em !important;
-        font-size: 11px !important;
+        color: #FFFFFF !important; background: none !important;
+        border-bottom: none !important; border-left: none !important;
+        text-transform: uppercase !important; letter-spacing: 0.1em !important;
+        font-size: 10px !important; padding: 0 !important; box-shadow: none !important;
     }
-    section[data-testid="stSidebar"] hr {
-        border-color: rgba(255,255,255,0.2) !important;
-    }
-
-    /* Sidebar nav labels */
+    section[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.18) !important; }
     section[data-testid="stSidebar"] [data-testid="stRadio"] label {
-        color: #C7D2FE !important;
-        font-weight: 500 !important;
-        font-size: 15px !important;
-        padding: 0.4rem 0.8rem !important;
-        border-radius: 8px !important;
-        transition: all 0.15s !important;
+        color: #C4B5FD !important; font-weight: 500 !important; font-size: 14px !important;
+        padding: 0.45rem 0.9rem !important; border-radius: 10px !important; transition: all 0.15s !important;
     }
     section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-        color: #FFFFFF !important;
-        background: rgba(255,255,255,0.15) !important;
+        color: #FFFFFF !important; background: rgba(255,255,255,0.14) !important;
     }
     section[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
-        color: #FFFFFF !important;
-        background: rgba(255,255,255,0.22) !important;
-        font-weight: 600 !important;
+        color: #FFFFFF !important; background: rgba(255,255,255,0.22) !important; font-weight: 700 !important;
     }
-
-    /* Sidebar inputs — white on indigo */
     section[data-testid="stSidebar"] input[type="text"],
     section[data-testid="stSidebar"] input[type="password"],
     section[data-testid="stSidebar"] input[type="number"] {
-        background: rgba(255,255,255,0.15) !important;
-        border: 1.5px solid rgba(255,255,255,0.35) !important;
-        border-radius: 8px !important;
-        color: #FFFFFF !important;
-        font-size: 15px !important;
-        font-family: 'Inter', sans-serif !important;
+        background: rgba(255,255,255,0.14) !important;
+        border: 1.5px solid rgba(255,255,255,0.32) !important;
+        border-radius: 10px !important; color: #FFFFFF !important; font-size: 14px !important;
     }
-    section[data-testid="stSidebar"] input::placeholder {
-        color: rgba(255,255,255,0.5) !important;
-    }
+    section[data-testid="stSidebar"] input::placeholder { color: rgba(255,255,255,0.45) !important; }
     section[data-testid="stSidebar"] [data-testid="stNumberInput"] button {
-        background: rgba(255,255,255,0.15) !important;
-        border-color: rgba(255,255,255,0.25) !important;
-        color: #FFFFFF !important;
-    }
-    section[data-testid="stSidebar"] [data-testid="stAlert"] {
-        border-radius: 8px !important;
-        font-size: 13px !important;
+        background: rgba(255,255,255,0.14) !important;
+        border-color: rgba(255,255,255,0.24) !important; color: #FFFFFF !important;
     }
 
     /* ── HEADINGS ──────────────────────────────────────────────────────────── */
     h1 {
-        font-size: 26px !important;
-        font-weight: 700 !important;
-        color: #1E1B4B !important;
-        letter-spacing: -0.025em !important;
-        padding-bottom: 0.6rem !important;
-        margin-bottom: 1.25rem !important;
-        border-bottom: 3px solid #4F46E5 !important;
-        line-height: 1.25 !important;
+        font-size: 30px !important; font-weight: 800 !important;
+        color: #1E1B4B !important; letter-spacing: -0.03em !important;
+        line-height: 1.2 !important; padding-bottom: 0.7rem !important;
+        margin-bottom: 1.25rem !important; border-bottom: 4px solid #4F46E5 !important;
     }
+    /* h2 — colored box, white text, rounded — the signature "heading pop" */
     h2 {
-        font-size: 18px !important;
-        font-weight: 600 !important;
-        color: #1E1B4B !important;
-        letter-spacing: -0.01em !important;
-        line-height: 1.35 !important;
+        font-size: 17px !important; font-weight: 700 !important;
+        color: #FFFFFF !important; letter-spacing: 0 !important;
+        background: linear-gradient(110deg, #4338CA 0%, #7C3AED 100%) !important;
+        padding: 0.55rem 1.1rem !important; border-radius: 12px !important;
+        margin: 1.5rem 0 0.9rem !important; border: none !important;
+        box-shadow: 0 4px 16px rgba(67,56,202,0.28) !important;
+        display: block !important;
     }
+    /* h3 — left-bordered pill label */
     h3 {
-        font-size: 12px !important;
-        font-weight: 700 !important;
-        color: #6366F1 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.1em !important;
-        line-height: 1.4 !important;
+        font-size: 13px !important; font-weight: 700 !important;
+        color: #4F46E5 !important; text-transform: uppercase !important;
+        letter-spacing: 0.09em !important; line-height: 1.4 !important;
+        background: #EEF2FF !important; padding: 0.3rem 0.85rem !important;
+        border-radius: 0 8px 8px 0 !important;
+        border-left: 4px solid #4F46E5 !important; margin-bottom: 0.5rem !important;
     }
 
-    /* ── BUTTONS — bold, colorful, gem-like ─────────────────────────────────── */
+    /* ── BUTTONS ───────────────────────────────────────────────────────────── */
     .stButton > button {
-        background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
-        color: #FFFFFF !important;
-        border: 1.5px solid #4338CA !important;
-        border-radius: 9px !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 600 !important;
-        font-size: 15px !important;
-        padding: 0.5rem 1.4rem !important;
-        letter-spacing: 0.01em !important;
-        box-shadow: 0 2px 8px rgba(79,70,229,0.35), 0 1px 0 rgba(255,255,255,0.15) inset !important;
-        transition: all 0.15s ease !important;
-        line-height: 1.5 !important;
+        background: linear-gradient(135deg, #6366F1 0%, #4338CA 100%) !important;
+        color: #FFFFFF !important; border: none !important;
+        border-radius: 10px !important; font-weight: 700 !important;
+        font-size: 14px !important; padding: 0.55rem 1.5rem !important;
+        box-shadow: 0 3px 12px rgba(79,70,229,0.4), 0 1px 0 rgba(255,255,255,0.12) inset !important;
+        transition: all 0.15s ease !important; letter-spacing: 0.02em !important;
     }
     .stButton > button:hover {
         background: linear-gradient(135deg, #818CF8 0%, #6366F1 100%) !important;
-        border-color: #6366F1 !important;
-        box-shadow: 0 6px 20px rgba(79,70,229,0.45), 0 1px 0 rgba(255,255,255,0.2) inset !important;
+        box-shadow: 0 8px 24px rgba(79,70,229,0.5) !important;
         transform: translateY(-2px) !important;
     }
-    .stButton > button:active {
-        transform: translateY(0) !important;
-        box-shadow: 0 2px 6px rgba(79,70,229,0.3) !important;
-    }
+    .stButton > button:active { transform: translateY(0) !important; }
     [data-testid="stDownloadButton"] > button {
-        background: linear-gradient(135deg, #34D399 0%, #10B981 100%) !important;
-        border-color: #059669 !important;
-        box-shadow: 0 2px 8px rgba(16,185,129,0.35) !important;
+        background: linear-gradient(135deg, #34D399 0%, #059669 100%) !important;
+        box-shadow: 0 3px 12px rgba(5,150,105,0.4) !important;
     }
     [data-testid="stDownloadButton"] > button:hover {
         background: linear-gradient(135deg, #6EE7B7 0%, #34D399 100%) !important;
-        box-shadow: 0 6px 20px rgba(16,185,129,0.45) !important;
+        box-shadow: 0 8px 24px rgba(5,150,105,0.5) !important;
     }
 
-    /* ── DROPDOWNS & SELECTS — white bg, strong visible border ─────────────── */
+    /* ── DROPDOWNS — big, white, clearly bordered ───────────────────────────── */
     [data-baseweb="select"] > div:first-child {
-        background: #FFFFFF !important;
-        border: 2px solid #A5B4FC !important;
-        border-radius: 9px !important;
-        font-size: 15px !important;
-        color: #1E1B4B !important;
+        background: #FFFFFF !important; border: 2px solid #818CF8 !important;
+        border-radius: 11px !important; min-height: 48px !important;
+        font-size: 15px !important; color: #1E1B4B !important;
         transition: border-color 0.15s, box-shadow 0.15s !important;
+        padding: 0.1rem 0.25rem !important;
     }
-    [data-baseweb="select"] > div:first-child:hover {
-        border-color: #6366F1 !important;
-    }
+    [data-baseweb="select"] > div:first-child:hover { border-color: #4F46E5 !important; }
     [data-baseweb="select"]:focus-within > div:first-child {
-        border-color: #4F46E5 !important;
-        box-shadow: 0 0 0 3px rgba(99,102,241,0.18) !important;
+        border-color: #4F46E5 !important; box-shadow: 0 0 0 4px rgba(99,102,241,0.18) !important;
     }
-    /* Dropdown option list */
-    [data-baseweb="popover"] ul,
-    [data-baseweb="menu"] {
-        background: #FFFFFF !important;
-        border: 1.5px solid #C7D2FE !important;
-        border-radius: 10px !important;
-        box-shadow: 0 8px 30px rgba(79,70,229,0.15) !important;
+    [data-baseweb="popover"] ul, [data-baseweb="menu"] {
+        background: #FFFFFF !important; border: 2px solid #C7D2FE !important;
+        border-radius: 12px !important; box-shadow: 0 12px 40px rgba(79,70,229,0.18) !important;
+        font-size: 15px !important;
     }
-    [data-baseweb="option"]:hover,
-    [data-baseweb="option"][aria-selected="true"] {
-        background: #EEF2FF !important;
-        color: #4338CA !important;
+    [data-baseweb="option"]:hover, [data-baseweb="option"][aria-selected="true"] {
+        background: #EEF2FF !important; color: #4338CA !important; font-weight: 600 !important;
     }
 
-    /* Text inputs */
+    /* Text/number inputs */
     [data-testid="stTextInput"] input,
     [data-testid="stTextArea"] textarea,
     [data-testid="stNumberInput"] input {
-        background: #FFFFFF !important;
-        border: 2px solid #A5B4FC !important;
-        border-radius: 9px !important;
-        font-size: 15px !important;
-        color: #1E1B4B !important;
-        font-family: 'Inter', sans-serif !important;
+        background: #FFFFFF !important; border: 2px solid #818CF8 !important;
+        border-radius: 11px !important; min-height: 44px !important;
+        font-size: 15px !important; color: #1E1B4B !important;
         transition: border-color 0.15s, box-shadow 0.15s !important;
     }
     [data-testid="stTextInput"] input:focus,
     [data-testid="stTextArea"] textarea:focus,
     [data-testid="stNumberInput"] input:focus {
         border-color: #4F46E5 !important;
-        box-shadow: 0 0 0 3px rgba(99,102,241,0.18) !important;
-        outline: none !important;
+        box-shadow: 0 0 0 4px rgba(99,102,241,0.18) !important; outline: none !important;
     }
-
-    /* Multiselect */
     [data-testid="stMultiSelect"] > div > div {
-        background: #FFFFFF !important;
-        border: 2px solid #A5B4FC !important;
-        border-radius: 9px !important;
+        background: #FFFFFF !important; border: 2px solid #818CF8 !important;
+        border-radius: 11px !important; min-height: 48px !important;
     }
     [data-baseweb="tag"] {
-        background: #EEF2FF !important;
-        color: #4338CA !important;
-        border: 1px solid #C7D2FE !important;
-        border-radius: 6px !important;
-        font-size: 13px !important;
-        font-weight: 600 !important;
+        background: #EEF2FF !important; color: #4338CA !important;
+        border: 1.5px solid #C7D2FE !important; border-radius: 8px !important;
+        font-size: 13px !important; font-weight: 700 !important; padding: 0.1rem 0.5rem !important;
     }
 
-    /* ── METRIC CARDS — white, colored accents ──────────────────────────────── */
+    /* ── METRIC CARDS ──────────────────────────────────────────────────────── */
     [data-testid="stMetric"] {
-        background: #FFFFFF !important;
-        border-radius: 14px !important;
-        padding: 1.1rem 1.25rem !important;
-        border: 1.5px solid #E0E7FF !important;
-        border-top: 4px solid #6366F1 !important;
-        box-shadow: 0 2px 12px rgba(79,70,229,0.09) !important;
+        background: #FFFFFF !important; border-radius: 16px !important;
+        padding: 1.25rem 1.4rem !important;
+        border: 2px solid #E0E7FF !important; border-top: 5px solid #6366F1 !important;
+        box-shadow: 0 4px 18px rgba(79,70,229,0.10) !important;
         transition: box-shadow 0.2s, transform 0.15s !important;
     }
     [data-testid="stMetric"]:hover {
-        box-shadow: 0 6px 24px rgba(79,70,229,0.16) !important;
-        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 28px rgba(79,70,229,0.18) !important; transform: translateY(-3px) !important;
     }
     [data-testid="stMetricLabel"] > div {
-        font-size: 12px !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.08em !important;
-        color: #6366F1 !important;
+        font-size: 11px !important; font-weight: 800 !important;
+        text-transform: uppercase !important; letter-spacing: 0.1em !important; color: #7C3AED !important;
     }
     [data-testid="stMetricValue"] > div {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 28px !important;
-        font-weight: 600 !important;
-        color: #1E1B4B !important;
-        letter-spacing: -0.02em !important;
+        font-size: 30px !important; font-weight: 700 !important;
+        color: #1E1B4B !important; letter-spacing: -0.03em !important;
     }
-    [data-testid="stMetricDelta"] > div {
-        font-size: 14px !important;
-        font-weight: 600 !important;
-    }
+    [data-testid="stMetricDelta"] > div { font-size: 14px !important; font-weight: 600 !important; }
 
     /* ── TABS ──────────────────────────────────────────────────────────────── */
     .stTabs [data-baseweb="tab-list"] {
-        background: transparent !important;
-        border-bottom: 2.5px solid #E0E7FF !important;
-        gap: 0 !important;
+        background: transparent !important; border-bottom: 2.5px solid #C7D2FE !important; gap: 0 !important;
     }
     .stTabs [data-baseweb="tab"] {
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        color: #6B7280 !important;
-        background: transparent !important;
-        border-bottom: 3px solid transparent !important;
-        margin-bottom: -2.5px !important;
-        padding: 0.6rem 1.2rem !important;
-        border-radius: 7px 7px 0 0 !important;
-        transition: color 0.15s, background 0.15s !important;
+        font-size: 15px !important; font-weight: 600 !important; color: #6B7280 !important;
+        background: transparent !important; border-bottom: 3px solid transparent !important;
+        margin-bottom: -2.5px !important; padding: 0.65rem 1.3rem !important;
+        border-radius: 8px 8px 0 0 !important; transition: all 0.15s !important;
     }
-    .stTabs [data-baseweb="tab"]:hover {
-        color: #4F46E5 !important;
-        background: #EEF2FF !important;
-    }
+    .stTabs [data-baseweb="tab"]:hover { color: #4F46E5 !important; background: #EEF2FF !important; }
     .stTabs [aria-selected="true"] {
-        color: #4F46E5 !important;
-        border-bottom: 3px solid #4F46E5 !important;
-        background: transparent !important;
+        color: #4F46E5 !important; border-bottom: 3px solid #4F46E5 !important;
+        background: transparent !important; font-weight: 700 !important;
     }
-    .stTabs [data-baseweb="tab-panel"] {
-        padding-top: 1.25rem !important;
-    }
+    .stTabs [data-baseweb="tab-panel"] { padding-top: 1.25rem !important; }
 
-    /* ── BORDERED CONTAINERS ────────────────────────────────────────────────── */
+    /* ── CARDS / BORDERED CONTAINERS ───────────────────────────────────────── */
     [data-testid="stVerticalBlockBorderWrapper"] {
-        background: #FFFFFF !important;
-        border: 1.5px solid #E0E7FF !important;
-        border-radius: 14px !important;
-        box-shadow: 0 2px 10px rgba(79,70,229,0.07) !important;
+        background: #FFFFFF !important; border: 2px solid #E0E7FF !important;
+        border-radius: 16px !important; box-shadow: 0 4px 18px rgba(79,70,229,0.08) !important;
         overflow: hidden !important;
     }
 
     /* ── EXPANDERS ─────────────────────────────────────────────────────────── */
     [data-testid="stExpander"] {
-        border: 1.5px solid #E0E7FF !important;
-        border-radius: 12px !important;
-        background: #FFFFFF !important;
-        box-shadow: 0 2px 8px rgba(79,70,229,0.06) !important;
+        border: 2px solid #DDD6FE !important; border-radius: 14px !important;
+        background: #FFFFFF !important; box-shadow: 0 3px 12px rgba(79,70,229,0.07) !important;
         overflow: hidden !important;
     }
     [data-testid="stExpander"] summary {
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        color: #1E1B4B !important;
-        padding: 0.8rem 1rem !important;
-        background: #F5F3FF !important;
-        transition: background 0.15s !important;
+        font-size: 15px !important; font-weight: 600 !important; color: #1E1B4B !important;
+        padding: 0.85rem 1.1rem !important; background: #F5F3FF !important; transition: background 0.15s !important;
     }
-    [data-testid="stExpander"] summary:hover {
-        background: #EEF2FF !important;
-        color: #4F46E5 !important;
-    }
+    [data-testid="stExpander"] summary:hover { background: #EEF2FF !important; color: #4F46E5 !important; }
     [data-testid="stExpander"][open] > summary {
-        background: #EEF2FF !important;
-        color: #4F46E5 !important;
-        border-bottom: 1.5px solid #E0E7FF !important;
+        background: #EEF2FF !important; color: #4F46E5 !important;
+        border-bottom: 2px solid #DDD6FE !important;
     }
 
     /* ── ALERTS ─────────────────────────────────────────────────────────────── */
-    [data-testid="stAlert"] {
-        border-radius: 10px !important;
-        font-size: 15px !important;
-        font-family: 'Inter', sans-serif !important;
-    }
+    [data-testid="stAlert"] { border-radius: 12px !important; font-size: 15px !important; }
 
     /* ── TOGGLE ─────────────────────────────────────────────────────────────── */
-    [role="switch"][aria-checked="true"] {
-        background-color: #4F46E5 !important;
-    }
+    [role="switch"][aria-checked="true"] { background-color: #4F46E5 !important; }
 
-    /* ── DATAFRAMES ─────────────────────────────────────────────────────────── */
+    /* ── DATAFRAMES — pop the headers ──────────────────────────────────────── */
     [data-testid="stDataFrame"] {
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        border: 1.5px solid #E0E7FF !important;
+        border-radius: 14px !important; overflow: hidden !important;
+        border: 2px solid #DDD6FE !important;
+        box-shadow: 0 4px 16px rgba(79,70,229,0.09) !important;
     }
+    /* Attempt to style dataframe headers via canvas font override */
+    [data-testid="stDataFrame"] canvas { border-radius: 14px !important; }
 
-    /* ── CHART CONTAINERS — consistent top-alignment ────────────────────────── */
-    [data-testid="stPlotlyChart"] {
-        border-radius: 12px !important;
-        overflow: hidden !important;
-    }
+    /* ── CHARTS — full width, no clipping ──────────────────────────────────── */
+    [data-testid="stPlotlyChart"] { border-radius: 14px !important; overflow: hidden !important; }
+    [data-testid="stPlotlyChart"] > div { border-radius: 14px !important; }
 
-    /* ── CHAT — fully light ─────────────────────────────────────────────────── */
+    /* ── CHAT — fully light, bigger input ──────────────────────────────────── */
     [data-testid="stChatMessage"] {
-        border-radius: 12px !important;
-        background: #FFFFFF !important;
-        border: 1.5px solid #E0E7FF !important;
-        box-shadow: 0 2px 8px rgba(79,70,229,0.06) !important;
-        margin-bottom: 0.75rem !important;
-        font-size: 15px !important;
+        border-radius: 14px !important; background: #FFFFFF !important;
+        border: 2px solid #DDD6FE !important; box-shadow: 0 3px 12px rgba(79,70,229,0.07) !important;
+        margin-bottom: 0.9rem !important; font-size: 15px !important;
+        padding: 0.75rem 1rem !important;
     }
-    [data-testid="stChatInputContainer"],
-    [data-testid="stChatInput"] {
-        background: #FFFFFF !important;
-        border-top: 1.5px solid #E0E7FF !important;
+    [data-testid="stChatInputContainer"], [data-testid="stChatInput"] {
+        background: #FFFFFF !important; border-top: 2px solid #DDD6FE !important;
+        padding-top: 0.75rem !important;
     }
     [data-testid="stChatInput"] textarea {
-        background: #FFFFFF !important;
-        border: 2px solid #A5B4FC !important;
-        border-radius: 10px !important;
-        color: #1E1B4B !important;
-        font-size: 15px !important;
-        font-family: 'Inter', sans-serif !important;
+        background: #FFFFFF !important; border: 2px solid #818CF8 !important;
+        border-radius: 12px !important; color: #1E1B4B !important;
+        font-size: 15px !important; min-height: 80px !important;
+        font-family: 'Inter', sans-serif !important; padding: 0.75rem 1rem !important;
     }
     [data-testid="stChatInput"] textarea:focus {
-        border-color: #4F46E5 !important;
-        box-shadow: 0 0 0 3px rgba(99,102,241,0.18) !important;
+        border-color: #4F46E5 !important; box-shadow: 0 0 0 4px rgba(99,102,241,0.18) !important;
     }
 
     /* ── CAPTIONS ──────────────────────────────────────────────────────────── */
-    [data-testid="stCaptionContainer"] p,
-    .stCaption, small {
-        color: #818CF8 !important;
-        font-size: 13px !important;
+    [data-testid="stCaptionContainer"] p, .stCaption, small {
+        color: #7C3AED !important; font-size: 13px !important; font-style: italic !important;
     }
 
     /* ── DIVIDERS ──────────────────────────────────────────────────────────── */
-    hr {
-        border-color: #E0E7FF !important;
-        margin: 1.5rem 0 !important;
-    }
+    hr { border-color: #DDD6FE !important; margin: 1.75rem 0 !important; }
 
     /* ── SLIDER ─────────────────────────────────────────────────────────────── */
     [data-testid="stSlider"] [role="slider"] {
-        background: #4F46E5 !important;
-        border: 2px solid #6366F1 !important;
+        background: #4F46E5 !important; border: 3px solid #6366F1 !important;
     }
 
     /* ── HIDE STREAMLIT CHROME ─────────────────────────────────────────────── */
@@ -519,12 +404,31 @@ def build_segment_profiles(df):
 # ─── Sidebar ────────────────────────────────────────────────────────────────
 def render_sidebar(df):
     st.sidebar.markdown("""
-    <div style="padding: 1.25rem 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;">
-        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
-            <span style="font-size:1.5rem; line-height:1;">🎯</span>
-            <span style="font-size:1.0625rem; font-weight:700; color:#F1F5F9; letter-spacing:-0.02em; font-family:'Inter',sans-serif;">Churn Engine</span>
+    <div style="padding:1.5rem 0.75rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.15); margin-bottom:1.1rem;">
+        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.35rem;">
+            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="lg1" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#A78BFA"/>
+                        <stop offset="100%" stop-color="#6366F1"/>
+                    </linearGradient>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+                <rect width="38" height="38" rx="10" fill="url(#lg1)" filter="url(#glow)"/>
+                <rect x="8" y="24" width="5" height="8" rx="2" fill="white" opacity="0.9"/>
+                <rect x="16.5" y="17" width="5" height="15" rx="2" fill="white"/>
+                <rect x="25" y="10" width="5" height="22" rx="2" fill="white" opacity="0.75"/>
+                <path d="M10.5 20 L19 13 L27.5 7" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="27.5" cy="7" r="2.5" fill="#FCD34D"/>
+            </svg>
+            <div>
+                <div style="font-size:1.05rem; font-weight:800; color:#FFFFFF; letter-spacing:-0.02em; font-family:'Inter',sans-serif; line-height:1.1;">Churn Engine</div>
+                <div style="font-size:0.65rem; color:#C4B5FD; font-weight:600; text-transform:uppercase; letter-spacing:0.12em; font-family:'Inter',sans-serif;">Decision Intelligence</div>
+            </div>
         </div>
-        <div style="font-size:0.7rem; color:#475569; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; padding-left:2.1rem; font-family:'Inter',sans-serif;">Decision Intelligence</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -640,11 +544,8 @@ def page_segmentation(df):
 
     st.markdown("---")
 
-    # ── UMAP Scatter ────────────────────────────────────────────────────────
-    col_left, col_right = st.columns([2, 1])
-
-    with col_left:
-        st.subheader("Customer Behavioral Space (2D Projection)")
+    # ── UMAP Scatter — full width ────────────────────────────────────────────
+    st.subheader("Customer Behavioral Space (2D Projection)")
         color_by = st.selectbox(
             "Colour by",
             [
@@ -713,67 +614,60 @@ def page_segmentation(df):
                 title=f"UMAP — {color_by}",
             )
 
-        fig.update_traces(marker=dict(size=4))
+        fig.update_traces(marker=dict(size=5, line=dict(width=0.3, color='white')))
         fig.update_layout(
-            height=500,
+            height=620,
             template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
             paper_bgcolor="#FFFFFF",
-            margin=dict(l=10, r=10, t=40, b=10),
+            margin=dict(l=20, r=20, t=50, b=20),
+            legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
         )
         with st.container(border=True):
             st.plotly_chart(fig, use_container_width=True)
             st.caption(_UMAP_CAPTIONS.get(color_by, ""))
 
-    with col_right:
-        st.subheader("Segment Stability Score")
-        st.caption(
-            "Tests whether the same 5 segments emerge from 100 different random "
-            "data samples — proving the clusters are real, not a random artifact."
-        )
-        if stability:
-            ari = stability["mean_ari"]
-            grade = stability["grade"]
-            color = (
-                "#2ECC71" if ari >= 0.85 else "#F39C12" if ari >= 0.70 else "#E74C3C"
-            )
+    st.markdown("---")
 
-            st.metric(
-                "Mean ARI",
-                f"{ari:.3f}",
-                help="Adjusted Rand Index across 100 bootstrap resamplings. Above 0.70 = stable.",
-            )
-            st.metric("Std ARI", f"{stability['std_ari']:.3f}")
-            st.metric("Stability Grade", grade)
+    # ── Segment Stability — full width below UMAP ────────────────────────────
+    st.subheader("Segment Stability Score")
+    st.markdown(
+        "Tests whether the same 5 segments emerge from **100 different random data samples** "
+        "— proving the clusters are real behavioral patterns, not a random artifact of the training data."
+    )
+    if stability:
+        ari = stability["mean_ari"]
+        grade = stability["grade"]
+        color = "#4F46E5" if ari >= 0.85 else "#F59E0B" if ari >= 0.70 else "#EF4444"
 
-            ari_scores = stability.get("ari_scores", [])
-            if ari_scores:
-                fig_ari = px.histogram(
-                    x=ari_scores,
-                    nbins=20,
-                    labels={"x": "ARI Score"},
-                    title="Stability Score Distribution (100 bootstraps)",
-                    color_discrete_sequence=[color],
+        s1, s2, s3 = st.columns(3)
+        s1.metric("Mean ARI", f"{ari:.3f}", help="Adjusted Rand Index across 100 bootstrap resamplings. Above 0.70 = stable.")
+        s2.metric("Std ARI", f"{stability['std_ari']:.3f}", help="Lower = more consistent across resamplings.")
+        s3.metric("Stability Grade", grade)
+
+        ari_scores = stability.get("ari_scores", [])
+        if ari_scores:
+            fig_ari = px.histogram(
+                x=ari_scores, nbins=25,
+                labels={"x": "ARI Score", "y": "Bootstrap Resamplings"},
+                title="Bootstrap Stability Distribution — 100 Resamplings of the Dataset",
+                color_discrete_sequence=[color],
+            )
+            fig_ari.add_vline(x=ari, line_dash="dash", line_color="#1E1B4B",
+                              annotation_text=f"Mean = {ari:.3f}", annotation_position="top right")
+            fig_ari.update_layout(
+                height=420,
+                template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
+                showlegend=False, paper_bgcolor="#FFFFFF",
+                margin=dict(l=20, r=20, t=50, b=20),
+            )
+            with st.container(border=True):
+                st.plotly_chart(fig_ari, use_container_width=True)
+                st.caption(
+                    "A tight cluster near 1.0 means the segments are highly reproducible. "
+                    "ARI = 1.0 is a perfect match; ARI > 0.85 is production-grade stability."
                 )
-                fig_ari.add_vline(
-                    x=ari,
-                    line_dash="dash",
-                    line_color="black",
-                    annotation_text=f"Mean={ari:.3f}",
-                )
-                fig_ari.update_layout(
-                    height=260,
-                    template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
-                    showlegend=False,
-                    paper_bgcolor="#FFFFFF",
-                )
-                with st.container(border=True):
-                    st.plotly_chart(fig_ari, use_container_width=True)
-                    st.caption(
-                        "A tight distribution near 1.0 means the segments are highly reproducible. "
-                        "ARI = 1.0 is a perfect match; ARI > 0.85 is production-grade stability."
-                    )
-        else:
-            st.warning("Stability data not available. Run pipeline first.")
+    else:
+        st.warning("Stability data not available. Run pipeline first.")
 
     st.markdown("---")
 
@@ -806,10 +700,10 @@ def page_segmentation(df):
         aspect="auto",
     )
     fig_heat.update_layout(
-        height=400,
+        height=480,
         template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
         paper_bgcolor="#FFFFFF",
-        margin=dict(l=10, r=10, t=40, b=10),
+        margin=dict(l=20, r=20, t=50, b=20),
     )
     with st.container(border=True):
         st.plotly_chart(fig_heat, use_container_width=True)
@@ -825,43 +719,43 @@ def page_segmentation(df):
     )
     gmm_cols = [c for c in df.columns if c.startswith("GMM_Prob_Seg")]
     if gmm_cols:
-        # Confidence = max GMM probability across all segments for each customer
         confidence = df[gmm_cols].max(axis=1)
         conf_df = pd.DataFrame({"Confidence": confidence, "Segment": df["Segment"]})
 
-        fig_conf = px.histogram(
-            conf_df,
-            x="Confidence",
-            color="Segment",
-            color_discrete_map=SEGMENT_COLORS,
-            nbins=30,
-            barmode="overlay",
-            opacity=0.75,
-            title="How confident is the model about each customer's segment assignment?",
-            labels={"Confidence": "Assignment Confidence (0 = uncertain, 1 = certain)"},
-        )
-        fig_conf.add_vline(
-            x=0.80,
-            line_dash="dash",
-            line_color="black",
-            annotation_text="80% confidence",
-            annotation_position="top right",
+        # Per-segment breakdown: % of customers in each confidence tier
+        tiers = []
+        for seg in conf_df["Segment"].unique():
+            seg_conf = conf_df[conf_df["Segment"] == seg]["Confidence"]
+            tiers.append({"Segment": seg, "Tier": "High (≥90%)",   "Customers": (seg_conf >= 0.90).sum()})
+            tiers.append({"Segment": seg, "Tier": "Medium (80–90%)", "Customers": ((seg_conf >= 0.80) & (seg_conf < 0.90)).sum()})
+            tiers.append({"Segment": seg, "Tier": "Boundary (<80%)", "Customers": (seg_conf < 0.80).sum()})
+        tier_df = pd.DataFrame(tiers)
+
+        fig_conf = px.bar(
+            tier_df,
+            x="Segment", y="Customers", color="Tier",
+            barmode="stack",
+            color_discrete_map={
+                "High (≥90%)": "#4F46E5",
+                "Medium (80–90%)": "#F59E0B",
+                "Boundary (<80%)": "#EF4444",
+            },
+            title="Segment Assignment Confidence — Customers by Confidence Tier per Segment",
+            labels={"Customers": "Number of Customers"},
         )
         fig_conf.update_layout(
-            height=340,
+            height=480,
             template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
             paper_bgcolor="#FFFFFF",
-            margin=dict(l=10, r=10, t=50, b=10),
+            margin=dict(l=20, r=20, t=50, b=20),
+            legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
         )
         with st.container(border=True):
             st.plotly_chart(fig_conf, use_container_width=True)
             pct_certain = (confidence >= 0.80).mean()
             st.caption(
-                f"**{pct_certain:.0%} of customers score ≥80% confidence** — the large spike at 1.0 "
-                "is expected and correct: it means the 5 segments are very well-separated in behavioral space, "
-                "so GMM can place most customers into one segment with near-certainty. "
-                "This validates the segmentation quality. Customers below 0.80 sit on a boundary "
-                "between two segments and deserve closer manual review."
+                f"{pct_certain:.0%} of all customers have ≥80% confidence in their segment. "
+                "Indigo = clearly placed, amber = borderline, red = sits between two segments and warrants review."
             )
 
 
@@ -907,65 +801,59 @@ def page_churn_risk(df):
     st.markdown("---")
 
     # ── Risk Distribution ───────────────────────────────────────────────────
-    col1, col2 = st.columns(2)
+    st.subheader("Churn Probability Distribution")
+    st.caption(
+        "Bars show how many customers fall at each predicted churn probability. "
+        "A spike near 1.0 means the model is confidently identifying high-risk customers. "
+        "Filter by segment to see the risk distribution for individual cohorts."
+    )
+    seg_filter = st.multiselect(
+        "Filter by segment",
+        df["Segment"].unique().tolist(),
+        default=df["Segment"].unique().tolist(),
+    )
+    df_filtered = df[df["Segment"].isin(seg_filter)]
 
-    with col1:
-        st.subheader("Churn Probability Distribution")
-        st.caption(
-            "Bars show how many customers fall at each predicted churn probability. "
-            "A spike near 1.0 means the model is confidently identifying high-risk customers. "
-            "Filter by segment to see the risk distribution for individual cohorts."
-        )
-        seg_filter = st.multiselect(
-            "Filter by segment",
-            df["Segment"].unique().tolist(),
-            default=df["Segment"].unique().tolist(),
-        )
-        df_filtered = df[df["Segment"].isin(seg_filter)]
+    fig_hist = px.histogram(
+        df_filtered,
+        x="ChurnProbability",
+        color="Segment",
+        color_discrete_map=SEGMENT_COLORS,
+        nbins=40,
+        barmode="overlay",
+        opacity=0.75,
+        title="Calibrated Churn Probability Distribution by Segment",
+        labels={"ChurnProbability": "Churn Probability"},
+    )
+    fig_hist.update_layout(
+        height=480, template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
+        paper_bgcolor="#FFFFFF", margin=dict(l=20, r=20, t=50, b=20),
+        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
+    )
+    with st.container(border=True):
+        st.plotly_chart(fig_hist, use_container_width=True)
 
-        fig_hist = px.histogram(
-            df_filtered,
-            x="ChurnProbability",
-            color="Segment",
-            color_discrete_map=SEGMENT_COLORS,
-            nbins=40,
-            barmode="overlay",
-            opacity=0.7,
-            title="Calibrated Churn Probability by Segment",
-            labels={"ChurnProbability": "Churn Probability"},
-        )
-        fig_hist.update_layout(
-            height=380, template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"), paper_bgcolor="#FFFFFF"
-        )
-        with st.container(border=True):
-            st.plotly_chart(fig_hist, use_container_width=True)
+    st.markdown("---")
 
-    with col2:
-        st.subheader("Risk Tier Breakdown")
-        st.caption(
-            "Customers are bucketed into Low / Medium / High Risk based on their predicted "
-            "churn probability. High Risk = churn probability above 60%. "
-            "Use this to size your retention budget by segment."
-        )
-        risk_seg = (
-            df_filtered.groupby(["Segment", "RiskTier"])
-            .size()
-            .reset_index(name="Count")
-        )
-        fig_risk = px.bar(
-            risk_seg,
-            x="Segment",
-            y="Count",
-            color="RiskTier",
-            color_discrete_map=RISK_COLORS,
-            title="Risk Tier Distribution by Segment",
-            barmode="group",
-        )
-        fig_risk.update_layout(
-            height=380, template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"), paper_bgcolor="#FFFFFF"
-        )
-        with st.container(border=True):
-            st.plotly_chart(fig_risk, use_container_width=True)
+    st.subheader("Risk Tier Breakdown")
+    st.caption(
+        "Customers bucketed into Low / Medium / High Risk based on predicted churn probability. "
+        "High Risk = churn probability above 60%. Use this to size your retention budget by segment."
+    )
+    risk_seg = df_filtered.groupby(["Segment", "RiskTier"]).size().reset_index(name="Count")
+    fig_risk = px.bar(
+        risk_seg, x="Segment", y="Count", color="RiskTier",
+        color_discrete_map=RISK_COLORS,
+        title="Risk Tier Distribution by Segment",
+        barmode="group",
+    )
+    fig_risk.update_layout(
+        height=480, template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
+        paper_bgcolor="#FFFFFF", margin=dict(l=20, r=20, t=50, b=20),
+        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
+    )
+    with st.container(border=True):
+        st.plotly_chart(fig_risk, use_container_width=True)
 
     st.markdown("---")
 
@@ -994,10 +882,11 @@ def page_churn_risk(df):
             title=f"Top Churn Drivers — {selected_seg} Segment",
         )
         fig_shap.update_layout(
-            height=400,
+            height=520,
             template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
             yaxis=dict(autorange="reversed"),
             paper_bgcolor="#FFFFFF",
+            margin=dict(l=20, r=20, t=50, b=20),
         )
         with st.container(border=True):
             st.plotly_chart(fig_shap, use_container_width=True)
@@ -1586,11 +1475,11 @@ and CSMs can mark outcomes (Retained / Churned / Pending) directly on each actio
     pending = outcomes.get("pending", 0) + (total - retained - churned - outcomes.get("pending", 0))
 
     st.subheader("Campaign Summary")
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total Actions Generated", f"{total:,}")
-    m2.metric("Marked Retained ✅", f"{retained:,}", f"{retained/total:.0%}" if total else "0%")
-    m3.metric("Marked Churned ❌", f"{churned:,}", f"{churned/total:.0%}" if total else "0%")
-    m4.metric("Pending Outcome ⏳", f"{total - retained - churned:,}")
+    m1, m2, m3, m4 = st.columns([1, 1, 1, 1], gap="medium")
+    m1.metric("Total Actions", f"{total:,}")
+    m2.metric("Retained", f"{retained:,}", f"{retained/total:.0%}" if total else "—")
+    m3.metric("Churned", f"{churned:,}", f"{churned/total:.0%}" if total else "—")
+    m4.metric("Pending", f"{total - retained - churned:,}")
 
     st.markdown("---")
 
@@ -1599,32 +1488,33 @@ and CSMs can mark outcomes (Retained / Churned / Pending) directly on each actio
     by_seg = summary.get("by_segment", [])
 
     if by_type:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Retention Rate by Intervention Type")
-            st.caption("Which intervention types are actually retaining customers?")
-            type_df = pd.DataFrame([
-                {
-                    "Intervention": r["intervention_type"] or "Unknown",
-                    "Total Actions": r["total"],
-                    "Retention Rate": f"{r['retention_rate']:.0%}" if r["retention_rate"] is not None else "No feedback yet",
-                }
-                for r in by_type
-            ])
-            st.dataframe(type_df.set_index("Intervention"), use_container_width=True)
+        st.subheader("Retention Rate by Intervention Type")
+        st.caption("Which intervention types are actually retaining customers? Mark outcomes on the Retention Actions page to populate this.")
+        type_df = pd.DataFrame([
+            {
+                "Intervention": r["intervention_type"] or "Unknown",
+                "Total Actions": r["total"],
+                "With Feedback": r["with_feedback"],
+                "Retention Rate": f"{r['retention_rate']:.0%}" if r["retention_rate"] is not None else "No feedback yet",
+            }
+            for r in by_type
+        ])
+        st.dataframe(type_df.set_index("Intervention"), use_container_width=True, height=280)
 
-        with col2:
-            st.subheader("Retention Rate by Segment")
-            st.caption("Which segments respond best to AI-generated interventions?")
-            seg_df = pd.DataFrame([
-                {
-                    "Segment": r["segment"] or "Unknown",
-                    "Total Actions": r["total"],
-                    "Retention Rate": f"{r['retention_rate']:.0%}" if r["retention_rate"] is not None else "No feedback yet",
-                }
-                for r in by_seg
-            ])
-            st.dataframe(seg_df.set_index("Segment"), use_container_width=True)
+        st.markdown("---")
+
+        st.subheader("Retention Rate by Segment")
+        st.caption("Which segments respond best to AI-generated interventions?")
+        seg_df = pd.DataFrame([
+            {
+                "Segment": r["segment"] or "Unknown",
+                "Total Actions": r["total"],
+                "With Feedback": r["with_feedback"],
+                "Retention Rate": f"{r['retention_rate']:.0%}" if r["retention_rate"] is not None else "No feedback yet",
+            }
+            for r in by_seg
+        ])
+        st.dataframe(seg_df.set_index("Segment"), use_container_width=True, height=280)
 
     st.markdown("---")
 
