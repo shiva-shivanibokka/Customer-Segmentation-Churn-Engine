@@ -125,6 +125,12 @@ def load_data():
 
     return df
 
+def truncate_customers(conn):
+    with conn.cursor() as cur:
+        cur.execute("TRUNCATE TABLE customers RESTART IDENTITY;")
+    conn.commit()
+    logger.info("Truncated customers table.")
+
 def upsert_customers(conn, df):
     cols = list(df.columns)
     rows = []
@@ -159,6 +165,7 @@ def main():
     conn = get_conn()
     logger.info("Connected.")
     create_customers_table(conn)
+    truncate_customers(conn)
     df = load_data()
     upsert_customers(conn, df)
     conn.close()

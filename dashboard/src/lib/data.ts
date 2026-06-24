@@ -4,7 +4,8 @@ export async function getCustomers(): Promise<Customer[]> {
   const { data, error } = await supabase
     .from("customers")
     .select("*")
-    .order("churn_probability", { ascending: false });
+    .order("churn_probability", { ascending: false })
+    .limit(60000);
   if (error) throw error;
   return data ?? [];
 }
