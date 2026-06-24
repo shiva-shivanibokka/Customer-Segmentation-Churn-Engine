@@ -3,8 +3,8 @@ import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 
 export const metadata: Metadata = {
-  title: "Churn Engine — Decision Intelligence",
-  description: "Customer Segmentation & Churn Prediction Dashboard",
+  title: "Subscription Churn Engine — Decision Intelligence",
+  description: "Subscription Segmentation & Churn Prediction Dashboard",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

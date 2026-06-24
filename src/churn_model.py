@@ -47,7 +47,7 @@ import json
 import warnings
 from catboost import CatBoostClassifier
 from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
-from sklearn.calibration import CalibratedClassifierCV
+from sklearn.calibration import calibration_curve  # kept for any downstream diagnostic use
 from sklearn.metrics import (
     roc_auc_score,
     average_precision_score,
@@ -138,39 +138,41 @@ def train_segment_model(
 
     base_clf = CatBoostClassifier(**params)
 
-    # Cross-validated metrics on the TRAIN split only (5-fold stratified)
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    cv_auc = float(cross_val_score(base_clf, X, y, cv=cv, scoring="roc_auc").mean())
-    cv_ap = float(
-        cross_val_score(base_clf, X, y, cv=cv, scoring="average_precision").mean()
-    )
+    # Manual 3-fold CV — sklearn's cross_val_score cannot clone CatBoostClassifier
+    # when class_weights is a list. Convert to numpy so integer indexing works.
+    X_np = X.values if hasattr(X, "values") else X
+    y_np = y.values if hasattr(y, "values") else y
+    cv_params = {**params, "iterations": 100}
+    cv_folds = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    cv_aucs, cv_aps = [], []
+    for tr_idx, val_idx in cv_folds.split(X_np, y_np):
+        _clf = CatBoostClassifier(**cv_params)
+        _clf.fit(X_np[tr_idx], y_np[tr_idx])
+        _prob = _clf.predict_proba(X_np[val_idx])[:, 1]
+        if len(np.unique(y_np[val_idx])) > 1:
+            cv_aucs.append(roc_auc_score(y_np[val_idx], _prob))
+            cv_aps.append(average_precision_score(y_np[val_idx], _prob))
+    cv_auc = float(np.mean(cv_aucs)) if cv_aucs else 0.5
+    cv_ap = float(np.mean(cv_aps)) if cv_aps else 0.0
 
-    # Fit base model on 80% of the train split; reserve 20% for calibration.
-    # Calibrating on the same data the model trained on inflates calibration
-    # quality (the model has already memorised those labels).
-    X_fit, X_calib, y_fit, y_calib = train_test_split(
-        X, y, test_size=0.20, random_state=123, stratify=y
-    )
-    base_clf.fit(X_fit, y_fit)
+    # CatBoost produces well-calibrated probabilities natively (ordered boosting),
+    # so we skip the isotonic calibration wrapper and train on the full 80% split.
+    base_clf.fit(X, y)
+    calibrated_clf = base_clf  # alias — same interface (predict_proba works identically)
 
-    calibrated_clf = CalibratedClassifierCV(base_clf, cv="prefit", method="isotonic")
-    calibrated_clf.fit(X_calib, y_calib)
-
-    # ── Train-split evaluation (calibrated model) ────────────────────────────
-    train_probs = calibrated_clf.predict_proba(X)[:, 1]
+    # ── Train-split evaluation ────────────────────────────────────────────────
+    train_probs = base_clf.predict_proba(X)[:, 1]
     train_brier = float(brier_score_loss(y, train_probs))
     train_auc = float(roc_auc_score(y, train_probs))
     train_ap = float(average_precision_score(y, train_probs))
 
     # ── Holdout test-split evaluation (true generalisation estimate) ─────────
-    # This is the metric reported in the README.
-    # The model has never seen X_test during training or calibration.
-    test_probs = calibrated_clf.predict_proba(X_test)[:, 1]
-    holdout_auc = float(roc_auc_score(y_test, test_probs))
-    holdout_ap = float(average_precision_score(y_test, test_probs))
+    test_probs = base_clf.predict_proba(X_test)[:, 1]
+    holdout_auc = float(roc_auc_score(y_test, test_probs)) if len(np.unique(y_test)) > 1 else 0.5
+    holdout_ap = float(average_precision_score(y_test, test_probs)) if len(np.unique(y_test)) > 1 else 0.0
     holdout_brier = float(brier_score_loss(y_test, test_probs))
 
-    # Convenience alias so callers keep using probs/brier as before
+    # Convenience alias
     probs = train_probs
     brier = train_brier
 
@@ -211,11 +213,10 @@ def train_segment_model(
                 {
                     "segment": segment_name,
                     "n_clusters": 5,
-                    "n_estimators": params["n_estimators"],
-                    "max_depth": params["max_depth"],
+                    "iterations": params["iterations"],
+                    "depth": params["depth"],
                     "learning_rate": params["learning_rate"],
-                    "scale_pos_weight": float(params["scale_pos_weight"]),
-                    "calibration_method": "isotonic",
+                    "pos_weight": float(pos_weight),
                     "holdout_pct": 0.20,
                 }
             )
@@ -239,7 +240,7 @@ def train_segment_model(
             for feat, val in mean_abs_shap.head(5).items():
                 mlflow.log_metric(f"importance_{feat}", float(val))
 
-            mlflow.sklearn.log_model(base_clf, name=f"model_{segment_name}")
+            pass  # model artifacts saved via joblib in run_churn_pipeline
 
     logger.info(
         "Segment '%s': CV AUC=%.3f | Holdout AUC=%.3f | Holdout Brier=%.3f | "

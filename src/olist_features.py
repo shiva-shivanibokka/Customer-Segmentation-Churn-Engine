@@ -29,9 +29,9 @@ OLIST_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "raw", "olist
 PROCESSED_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
 
 # 6-month observation window near the end of the dataset (Sep 2016 – Oct 2018)
-CHURN_CUTOFF_DATE   = pd.Timestamp("2018-06-01")   # feature engineering cutoff
-OBSERVATION_START   = pd.Timestamp("2018-06-01")   # if NO order after this → churned
-OBSERVATION_END     = pd.Timestamp("2018-10-01")   # dataset end
+CHURN_CUTOFF_DATE   = pd.Timestamp("2017-12-31")   # feature engineering cutoff (first 15 months)
+OBSERVATION_START   = pd.Timestamp("2018-01-01")   # if NO order after this → churned
+OBSERVATION_END     = pd.Timestamp("2018-10-01")   # dataset end (9-month observation window)
 
 # Brazilian state → City Tier (1=major metro, 2=secondary, 3=other)
 STATE_TIER = {
@@ -86,7 +86,7 @@ def build_order_features(dfs: dict) -> pd.DataFrame:
     pay = dfs["payments"].groupby("order_id").agg(
         total_payment=("payment_value", "sum"),
         avg_installments=("payment_installments", "mean"),
-        preferred_payment=("payment_type", lambda x: x.mode()[0] if len(x) > 0 else "credit_card"),
+        preferred_payment=("payment_type", lambda x: x.dropna().mode().iloc[0] if x.dropna().shape[0] > 0 else "credit_card"),
     ).reset_index()
     orders = orders.merge(pay, on="order_id", how="left")
 
@@ -103,7 +103,7 @@ def build_order_features(dfs: dict) -> pd.DataFrame:
     if "product_category_name" in dfs["products"].columns:
         prod_cat = dfs["items"].merge(dfs["products"][["product_id", "product_category_name"]], on="product_id", how="left")
         dominant_cat = prod_cat.groupby("order_id")["product_category_name"].agg(
-            lambda x: x.dropna().mode()[0] if x.dropna().shape[0] > 0 else "other"
+            lambda x: x.dropna().mode().iloc[0] if x.dropna().shape[0] > 0 else "other"
         ).reset_index().rename(columns={"product_category_name": "dominant_category"})
         orders = orders.merge(dominant_cat, on="order_id", how="left")
     else:
@@ -159,8 +159,8 @@ def engineer_customer_features(orders: pd.DataFrame) -> pd.DataFrame:
         AvgInstallments              = ("avg_installments", "mean"),
         DistinctSellers              = ("distinct_sellers", "sum"),
         CustomerState                = ("customer_state", "first"),
-        PreferredPaymentMode         = ("preferred_payment", lambda x: x.mode()[0] if len(x) > 0 else "credit_card"),
-        PreferedOrderCat             = ("dominant_category", lambda x: x.mode()[0] if x.dropna().shape[0] > 0 else "other"),
+        PreferredPaymentMode         = ("preferred_payment", lambda x: x.dropna().mode().iloc[0] if x.dropna().shape[0] > 0 else "credit_card"),
+        PreferedOrderCat             = ("dominant_category", lambda x: x.dropna().mode().iloc[0] if x.dropna().shape[0] > 0 else "other"),
     ).reset_index()
 
     # Compute derived columns

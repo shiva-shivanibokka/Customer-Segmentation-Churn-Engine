@@ -26,7 +26,7 @@ from sklearn.metrics import (
     davies_bouldin_score,
     adjusted_rand_score,
 )
-import umap
+import pacmap
 import joblib
 import os
 import warnings
@@ -201,21 +201,20 @@ def bootstrap_stability(
 
 
 def fit_umap(
-    X_scaled: np.ndarray, n_neighbors: int = 15, min_dist: float = 0.1
+    X_scaled: np.ndarray, n_neighbors: int = 10, min_dist: float = 0.1
 ) -> np.ndarray:
     """
-    UMAP dimensionality reduction to 2D for interactive cluster visualization.
-    UMAP preserves both local and global structure better than t-SNE at scale,
-    and is faster for the 5K-row dataset.
+    PaCMAP dimensionality reduction to 2D for interactive cluster visualization.
+    Replaces UMAP — same purpose, no numba/TensorFlow dependency, works with any NumPy version.
     """
-    reducer = umap.UMAP(
+    reducer = pacmap.PaCMAP(
         n_components=2,
         n_neighbors=n_neighbors,
-        min_dist=min_dist,
+        MN_ratio=0.5,
+        FP_ratio=2.0,
         random_state=42,
-        n_jobs=1,
     )
-    embedding = reducer.fit_transform(X_scaled)
+    embedding = reducer.fit_transform(X_scaled, init="pca")
     return embedding
 
 

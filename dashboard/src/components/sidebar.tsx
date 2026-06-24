@@ -47,7 +47,7 @@ export function Sidebar() {
             <circle cx="28.5" cy="8" r="3" fill="#FCD34D" />
           </svg>
           <div>
-            <div className="text-white font-bold text-[15px] leading-tight tracking-tight">Churn Engine</div>
+            <div className="text-white font-bold text-[15px] leading-tight tracking-tight">Subscription Churn</div>
             <div className="text-[#C4B5FD] text-[10px] font-semibold uppercase tracking-widest mt-0.5">
               Decision Intelligence
             </div>
@@ -82,8 +82,8 @@ export function Sidebar() {
       {/* Footer */}
       <div className="px-5 py-4 border-t border-white/15">
         <p className="text-[11px] text-white/35 leading-snug">
-          XGBoost · CausalML · UMAP<br />
-          Groq Llama 3.3 70B
+          CatBoost · CausalML · PaCMAP<br />
+          Groq Qwen QwQ-32B
         </p>
       </div>
     </aside>

@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from logging_config import configure_logging
 from features import build_pipeline, get_feature_sets
 from olist_features import build_olist_pipeline, get_olist_feature_sets
+from cell2cell_features import build_cell2cell_pipeline, get_cell2cell_feature_sets
 from segmentation import run_segmentation
 from churn_model import run_churn_pipeline
 from uplift_model import run_uplift_pipeline
@@ -64,7 +65,7 @@ def run_full_pipeline(force_retrain: bool = False, dataset: str = "ecommerce") -
         }
 
     logger.info("=" * 60)
-    logger.info("CUSTOMER SEGMENTATION & CHURN ENGINE — FULL PIPELINE [dataset=%s]", dataset)
+    logger.info("SUBSCRIPTION CHURN ENGINE — FULL PIPELINE [dataset=%s]", dataset)
     logger.info("=" * 60)
 
     # Stage 1: Feature Engineering
@@ -72,6 +73,9 @@ def run_full_pipeline(force_retrain: bool = False, dataset: str = "ecommerce") -
     if dataset == "olist":
         feature_sets = get_olist_feature_sets()
         df = build_olist_pipeline(save=True)
+    elif dataset == "cell2cell":
+        feature_sets = get_cell2cell_feature_sets()
+        df = build_cell2cell_pipeline(save=True)
     else:
         feature_sets = get_feature_sets()
         df = build_pipeline(save=True)
@@ -141,8 +145,8 @@ if __name__ == "__main__":
     configure_logging()
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="Force retrain all models")
-    parser.add_argument("--dataset", choices=["ecommerce", "olist"], default="ecommerce",
-                        help="Dataset to use: 'ecommerce' (original) or 'olist' (Brazilian e-commerce, ~96K customers)")
+    parser.add_argument("--dataset", choices=["ecommerce", "olist", "cell2cell"], default="ecommerce",
+                        help="Dataset: 'ecommerce' (original), 'olist' (Brazilian e-commerce), 'cell2cell' (71K subscription churn)")
     args = parser.parse_args()
 
     results = run_full_pipeline(force_retrain=args.force, dataset=args.dataset)
