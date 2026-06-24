@@ -147,7 +147,7 @@ def render_sidebar(df):
         "- Per-segment XGBoost\n"
         "- Isotonic calibration\n"
         "- CausalML uplift (T+S Learner)\n"
-        "- Claude retention actions"
+        "- Llama 3.3 retention actions (Groq)"
     )
 
     return page
@@ -663,7 +663,7 @@ def page_uplift(df):
 def page_retention_actions(df):
     st.title("LLM-Powered Retention Actions")
     st.markdown(
-        "For each Persuadable customer, Claude analyzes their **SHAP risk factors**, "
+        "For each Persuadable customer, Llama 3.3 (via Groq) analyzes their **SHAP risk factors**, "
         "**segment profile**, **churn probability**, and **uplift score** to generate "
         "a structured retention strategy: intervention type, channel, timing, message "
         "framing, and estimated ROI. This mirrors Salesforce Einstein Copilot's "
@@ -672,12 +672,12 @@ def page_retention_actions(df):
 
     # ── API Key Input ────────────────────────────────────────────────────────
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Claude API Key")
+    st.sidebar.subheader("Groq API Key")
     api_key = st.sidebar.text_input(
-        "Anthropic API Key",
+        "Groq API Key (free)",
         type="password",
-        placeholder="sk-ant-...",
-        help="Required for LLM retention action generation",
+        placeholder="gsk_...",
+        help="Free at console.groq.com — required for LLM retention action generation",
     )
     avg_clv = st.sidebar.number_input("Customer Lifetime Value ($)", value=500, step=50)
     top_n = st.sidebar.slider("Customers to generate actions for", 1, 20, 5)
@@ -768,8 +768,9 @@ def page_retention_actions(df):
 
     elif not api_key:
         st.info(
-            "Enter your Anthropic API key in the sidebar to generate "
-            "LLM-powered retention action plans for each at-risk customer."
+            "Enter your Groq API key in the sidebar to generate "
+            "LLM-powered retention action plans for each at-risk customer. "
+            "Get a free key at console.groq.com."
         )
 
         # Show example output when no key provided

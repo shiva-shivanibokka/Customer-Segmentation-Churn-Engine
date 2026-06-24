@@ -15,8 +15,8 @@ causalml==0.16.0
 # Experiment tracking
 mlflow==3.11.1
 
-# LLM
-anthropic==0.93.0
+# LLM (Groq free tier — get key at console.groq.com)
+groq>=0.9.0
 
 # API serving
 fastapi==0.129.0

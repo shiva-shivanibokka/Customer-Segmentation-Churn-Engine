@@ -2,7 +2,10 @@
 LLM Retention Action Generator
 ================================
 Converts SHAP-derived risk factors, uplift scores, and segment profiles
-into structured, personalized retention strategies via Claude.
+into structured, personalized retention strategies via an LLM.
+
+Uses Groq (free tier) with Llama 3.3 70B — fast inference, no cost,
+and strong structured JSON output. Get a free key at console.groq.com.
 
 This mirrors how Salesforce Einstein and HubSpot use LLMs to generate
 CSM (Customer Success Manager) playbooks: the model doesn't just say
@@ -24,7 +27,7 @@ import json
 import logging
 import os
 import time
-import anthropic
+from groq import Groq, RateLimitError
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -150,28 +153,28 @@ def generate_retention_action(
     top_shap: dict,
     api_key: str,
     avg_clv: float = 500.0,
-    model: str = "claude-haiku-4-5",
+    model: str = "llama-3.3-70b-versatile",
 ) -> dict:
     """
-    Generate a retention action for a single customer using Claude.
+    Generate a retention action for a single customer using Groq (free tier).
 
-    Uses claude-haiku-4-5 for cost efficiency (this is called per customer).
-    In a production system (Salesforce, HubSpot), this would be batched via
-    async workers and cached by customer segment to reduce API costs.
+    Uses llama-3.3-70b-versatile — Groq's free tier supports ~30 RPM which
+    is sufficient for batch retention action generation. In a production system
+    this would be batched via async workers and cached by segment to reduce calls.
     """
-    client = anthropic.Anthropic(api_key=api_key)
+    client = Groq(api_key=api_key)
     prompt = build_retention_prompt(customer_row, segment_profile, top_shap, avg_clv)
     customer_id = customer_row.get("CustomerID", "N/A")
     raw_text = "No response"
 
     for attempt in range(1, _MAX_RETRIES + 1):
         try:
-            response = client.messages.create(
+            response = client.chat.completions.create(
                 model=model,
                 max_tokens=600,
                 messages=[{"role": "user", "content": prompt}],
             )
-            raw_text = response.content[0].text.strip()
+            raw_text = response.choices[0].message.content.strip()
 
             # Strip markdown code fences if present
             if "```json" in raw_text:
@@ -194,7 +197,7 @@ def generate_retention_action(
                 logger.error("All retries exhausted for customer %s.", customer_id)
                 return {"customer_id": customer_id, "error": f"JSON parse error: {e}", "raw_response": raw_text}
 
-        except anthropic.RateLimitError:
+        except RateLimitError:
             logger.warning("Rate limited (attempt %d/%d) — backing off %.1fs...", attempt, _MAX_RETRIES, _RETRY_DELAY_S * attempt)
             time.sleep(_RETRY_DELAY_S * attempt)
 
