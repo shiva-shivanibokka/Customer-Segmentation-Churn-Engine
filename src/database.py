@@ -46,10 +46,14 @@ def initialize(database_url: Optional[str] = None) -> bool:
         with _get_conn() as conn:
             _create_schema(conn)
         _db_available = True
-        logger.info("Database connected and schema initialised.")
+        logger.info("Database connected and schema initialised successfully.")
         return True
+    except ImportError:
+        logger.warning("psycopg2 not installed — running without persistence.")
+        _db_available = False
+        return False
     except Exception as e:
-        logger.warning("Database unavailable (%s) — running without persistence.", e)
+        logger.warning("Database unavailable (%s: %s) — running without persistence.", type(e).__name__, e)
         _db_available = False
         return False
 
@@ -61,7 +65,9 @@ def is_available() -> bool:
 @contextmanager
 def _get_conn():
     import psycopg2
-    conn = psycopg2.connect(_DATABASE_URL, connect_timeout=5)
+    # Supabase (both Direct and Session Pooler) requires SSL.
+    # Pass sslmode explicitly so the connection works from cloud environments.
+    conn = psycopg2.connect(_DATABASE_URL, connect_timeout=10, sslmode="require")
     try:
         yield conn
         conn.commit()
