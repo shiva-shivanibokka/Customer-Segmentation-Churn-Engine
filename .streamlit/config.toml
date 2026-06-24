@@ -4,8 +4,8 @@ enableCORS = false
 port = 8501
 
 [theme]
-primaryColor = "#2ECC71"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
+primaryColor = "#4F46E5"
+backgroundColor = "#F8FAFC"
+secondaryBackgroundColor = "#1E293B"
+textColor = "#0F172A"
 font = "sans serif"

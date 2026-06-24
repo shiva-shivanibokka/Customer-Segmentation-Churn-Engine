@@ -44,6 +44,360 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
+# ─── Design system CSS ───────────────────────────────────────────────────────
+def _inject_css():
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    /* ── BASE ──────────────────────────────────────────────────────────────── */
+    html, body, [data-testid="stAppViewContainer"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        background: #F8FAFC !important;
+    }
+
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 1280px;
+    }
+
+    /* ── SIDEBAR — dark navy (the signature element) ───────────────────────── */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(175deg, #0F172A 0%, #1E293B 100%) !important;
+        border-right: 1px solid rgba(255,255,255,0.06) !important;
+    }
+    section[data-testid="stSidebar"] > div {
+        background: transparent !important;
+    }
+
+    /* Sidebar text */
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span:not([data-testid]),
+    section[data-testid="stSidebar"] label {
+        color: #94A3B8 !important;
+        font-size: 0.875rem !important;
+    }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #F1F5F9 !important;
+        border-bottom: none !important;
+        text-transform: none !important;
+        letter-spacing: normal !important;
+        font-size: 0.75rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.1em !important;
+        color: #475569 !important;
+    }
+    section[data-testid="stSidebar"] hr {
+        border-color: rgba(255,255,255,0.08) !important;
+    }
+
+    /* Nav radio labels */
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label {
+        color: #94A3B8 !important;
+        font-weight: 500 !important;
+        padding: 0.35rem 0.75rem !important;
+        border-radius: 7px !important;
+        display: block;
+        transition: color 0.15s, background 0.15s !important;
+        cursor: pointer;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+        color: #F1F5F9 !important;
+        background: rgba(79, 70, 229, 0.18) !important;
+    }
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-checked="true"],
+    section[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
+        color: #FFFFFF !important;
+        background: rgba(79, 70, 229, 0.32) !important;
+    }
+
+    /* Sidebar inputs */
+    section[data-testid="stSidebar"] input[type="text"],
+    section[data-testid="stSidebar"] input[type="password"],
+    section[data-testid="stSidebar"] input[type="number"] {
+        background: rgba(255,255,255,0.07) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 7px !important;
+        color: #F1F5F9 !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    section[data-testid="stSidebar"] input::placeholder {
+        color: #475569 !important;
+    }
+    section[data-testid="stSidebar"] [data-testid="stNumberInput"] button {
+        background: rgba(255,255,255,0.08) !important;
+        border-color: rgba(255,255,255,0.12) !important;
+        color: #94A3B8 !important;
+    }
+
+    /* Sidebar success/error chips */
+    section[data-testid="stSidebar"] [data-testid="stAlert"][data-baseweb="notification"] {
+        border-radius: 8px !important;
+        font-size: 0.8125rem !important;
+    }
+
+    /* ── HEADINGS ──────────────────────────────────────────────────────────── */
+    h1 {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 1.75rem !important;
+        font-weight: 700 !important;
+        color: #0F172A !important;
+        letter-spacing: -0.03em !important;
+        padding-bottom: 0.75rem !important;
+        margin-bottom: 1.5rem !important;
+        border-bottom: 3px solid #4F46E5 !important;
+    }
+    h2 {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 1.125rem !important;
+        font-weight: 600 !important;
+        color: #1E293B !important;
+        letter-spacing: -0.015em !important;
+    }
+    h3 {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        color: #64748B !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
+    }
+
+    /* ── BUTTONS ───────────────────────────────────────────────────────────── */
+    .stButton > button {
+        background: #4F46E5 !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        padding: 0.5rem 1.25rem !important;
+        letter-spacing: 0.01em !important;
+        box-shadow: 0 1px 3px rgba(79,70,229,0.25), 0 1px 2px rgba(0,0,0,0.06) !important;
+        transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important;
+        height: auto !important;
+        line-height: 1.5 !important;
+    }
+    .stButton > button:hover {
+        background: #4338CA !important;
+        box-shadow: 0 4px 16px rgba(79,70,229,0.38), 0 2px 6px rgba(0,0,0,0.08) !important;
+        transform: translateY(-1px) !important;
+    }
+    .stButton > button:active {
+        background: #3730A3 !important;
+        transform: translateY(0) !important;
+        box-shadow: 0 1px 3px rgba(79,70,229,0.25) !important;
+    }
+    .stButton > button:focus:not(:active) {
+        outline: 2px solid #818CF8 !important;
+        outline-offset: 2px !important;
+    }
+
+    /* Download buttons get amber treatment */
+    [data-testid="stDownloadButton"] > button {
+        background: #D97706 !important;
+        box-shadow: 0 1px 3px rgba(217,119,6,0.25) !important;
+    }
+    [data-testid="stDownloadButton"] > button:hover {
+        background: #B45309 !important;
+        box-shadow: 0 4px 16px rgba(217,119,6,0.38) !important;
+    }
+
+    /* ── METRIC CARDS ──────────────────────────────────────────────────────── */
+    [data-testid="stMetric"] {
+        background: #FFFFFF !important;
+        border-radius: 12px !important;
+        padding: 1rem 1.25rem 1rem 1.25rem !important;
+        border: 1px solid #E2E8F0 !important;
+        border-left: 4px solid #4F46E5 !important;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.06) !important;
+        transition: box-shadow 0.2s !important;
+    }
+    [data-testid="stMetric"]:hover {
+        box-shadow: 0 4px 12px rgba(15,23,42,0.10) !important;
+    }
+    [data-testid="stMetricLabel"] > div {
+        font-size: 0.6875rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
+        color: #64748B !important;
+    }
+    [data-testid="stMetricValue"] > div {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 1.625rem !important;
+        font-weight: 600 !important;
+        color: #0F172A !important;
+        letter-spacing: -0.02em !important;
+    }
+    [data-testid="stMetricDelta"] > div {
+        font-size: 0.8125rem !important;
+        font-weight: 500 !important;
+    }
+
+    /* ── TABS ──────────────────────────────────────────────────────────────── */
+    .stTabs [data-baseweb="tab-list"] {
+        background: transparent !important;
+        border-bottom: 2px solid #E2E8F0 !important;
+        gap: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        color: #64748B !important;
+        background: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid transparent !important;
+        margin-bottom: -2px !important;
+        padding: 0.625rem 1.125rem !important;
+        border-radius: 6px 6px 0 0 !important;
+        transition: color 0.15s, background 0.15s !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #4F46E5 !important;
+        background: rgba(79,70,229,0.05) !important;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #4F46E5 !important;
+        border-bottom: 2px solid #4F46E5 !important;
+        background: transparent !important;
+    }
+    .stTabs [data-baseweb="tab-panel"] {
+        padding-top: 1.25rem !important;
+    }
+
+    /* ── BORDERED CONTAINERS (st.container(border=True)) ───────────────────── */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 4px rgba(15,23,42,0.05) !important;
+        overflow: hidden !important;
+    }
+
+    /* ── EXPANDERS ─────────────────────────────────────────────────────────── */
+    [data-testid="stExpander"] {
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+        background: #FFFFFF !important;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
+        overflow: hidden !important;
+    }
+    [data-testid="stExpander"] summary {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 0.875rem !important;
+        color: #334155 !important;
+        padding: 0.75rem 1rem !important;
+        background: #F8FAFC !important;
+        transition: background 0.15s !important;
+    }
+    [data-testid="stExpander"] summary:hover {
+        background: #EEF2FF !important;
+        color: #4F46E5 !important;
+    }
+    [data-testid="stExpander"][open] > summary {
+        background: #EEF2FF !important;
+        color: #4F46E5 !important;
+        border-bottom: 1px solid #E0E7FF !important;
+    }
+
+    /* ── ALERTS & INFO BOXES ───────────────────────────────────────────────── */
+    [data-testid="stAlert"] {
+        border-radius: 10px !important;
+        font-size: 0.875rem !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+
+    /* ── INPUTS (main content area) ────────────────────────────────────────── */
+    .main [data-testid="stTextInput"] input,
+    .main [data-testid="stTextArea"] textarea {
+        border-radius: 8px !important;
+        border: 1.5px solid #E2E8F0 !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.875rem !important;
+        color: #0F172A !important;
+        background: #FFFFFF !important;
+        transition: border-color 0.15s, box-shadow 0.15s !important;
+    }
+    .main [data-testid="stTextInput"] input:focus,
+    .main [data-testid="stTextArea"] textarea:focus {
+        border-color: #4F46E5 !important;
+        box-shadow: 0 0 0 3px rgba(79,70,229,0.14) !important;
+        outline: none !important;
+    }
+    .main [data-testid="stSelectbox"] > div > div,
+    .main [data-testid="stMultiSelect"] > div > div {
+        border-radius: 8px !important;
+        border: 1.5px solid #E2E8F0 !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+
+    /* ── TOGGLE ────────────────────────────────────────────────────────────── */
+    [role="switch"][aria-checked="true"] {
+        background-color: #4F46E5 !important;
+    }
+
+    /* ── MULTISELECT TAGS ──────────────────────────────────────────────────── */
+    [data-baseweb="tag"] {
+        background: #EEF2FF !important;
+        color: #4338CA !important;
+        border-radius: 6px !important;
+        font-size: 0.8125rem !important;
+        font-weight: 500 !important;
+    }
+
+    /* ── DATAFRAME ─────────────────────────────────────────────────────────── */
+    [data-testid="stDataFrame"] {
+        border-radius: 10px !important;
+        overflow: hidden !important;
+        border: 1px solid #E2E8F0 !important;
+    }
+
+    /* ── CHAT ──────────────────────────────────────────────────────────────── */
+    [data-testid="stChatMessage"] {
+        border-radius: 12px !important;
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
+        margin-bottom: 0.625rem !important;
+    }
+    [data-testid="stChatInputContainer"] {
+        border-top: 1px solid #E2E8F0 !important;
+        background: #FFFFFF !important;
+        padding-top: 0.75rem !important;
+    }
+
+    /* ── CAPTIONS ──────────────────────────────────────────────────────────── */
+    [data-testid="stCaptionContainer"] p,
+    .stCaption {
+        color: #94A3B8 !important;
+        font-size: 0.8rem !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+
+    /* ── DIVIDERS ──────────────────────────────────────────────────────────── */
+    hr {
+        border-color: #E2E8F0 !important;
+        margin: 1.25rem 0 !important;
+    }
+
+    /* ── HIDE STREAMLIT CHROME ─────────────────────────────────────────────── */
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    [data-testid="stToolbar"] { display: none; }
+
+    </style>
+    """, unsafe_allow_html=True)
+
+
 # ─── Colour palette (consistent across all charts) ──────────────────────────
 SEGMENT_COLORS = {
     "Champions": "#2ECC71",
@@ -118,10 +472,15 @@ def build_segment_profiles(df):
 
 # ─── Sidebar ────────────────────────────────────────────────────────────────
 def render_sidebar(df):
-    st.sidebar.markdown("## 📊")
-    st.sidebar.title("Churn Engine")
-    st.sidebar.caption("Decision Intelligence Platform")
-    st.sidebar.markdown("---")
+    st.sidebar.markdown("""
+    <div style="padding: 1.25rem 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;">
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
+            <span style="font-size:1.5rem; line-height:1;">🎯</span>
+            <span style="font-size:1.0625rem; font-weight:700; color:#F1F5F9; letter-spacing:-0.02em; font-family:'Inter',sans-serif;">Churn Engine</span>
+        </div>
+        <div style="font-size:0.7rem; color:#475569; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; padding-left:2.1rem; font-family:'Inter',sans-serif;">Decision Intelligence</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     page = st.sidebar.radio(
         "Navigate",
@@ -311,8 +670,8 @@ def page_segmentation(df):
         fig.update_traces(marker=dict(size=4))
         fig.update_layout(
             height=500,
-            template="plotly_white",
-            paper_bgcolor="#FAFAFA",
+            template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
+            paper_bgcolor="#FFFFFF",
             margin=dict(l=10, r=10, t=40, b=10),
         )
         with st.container(border=True):
@@ -357,9 +716,9 @@ def page_segmentation(df):
                 )
                 fig_ari.update_layout(
                     height=260,
-                    template="plotly_white",
+                    template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
                     showlegend=False,
-                    paper_bgcolor="#FAFAFA",
+                    paper_bgcolor="#FFFFFF",
                 )
                 with st.container(border=True):
                     st.plotly_chart(fig_ari, use_container_width=True)
@@ -402,8 +761,8 @@ def page_segmentation(df):
     )
     fig_heat.update_layout(
         height=400,
-        template="plotly_white",
-        paper_bgcolor="#FAFAFA",
+        template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
+        paper_bgcolor="#FFFFFF",
         margin=dict(l=10, r=10, t=40, b=10),
     )
     with st.container(border=True):
@@ -444,8 +803,8 @@ def page_segmentation(df):
         )
         fig_conf.update_layout(
             height=340,
-            template="plotly_white",
-            paper_bgcolor="#FAFAFA",
+            template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
+            paper_bgcolor="#FFFFFF",
             margin=dict(l=10, r=10, t=50, b=10),
         )
         with st.container(border=True):
@@ -530,7 +889,7 @@ def page_churn_risk(df):
             labels={"ChurnProbability": "Churn Probability"},
         )
         fig_hist.update_layout(
-            height=380, template="plotly_white", paper_bgcolor="#FAFAFA"
+            height=380, template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"), paper_bgcolor="#FFFFFF"
         )
         with st.container(border=True):
             st.plotly_chart(fig_hist, use_container_width=True)
@@ -557,7 +916,7 @@ def page_churn_risk(df):
             barmode="group",
         )
         fig_risk.update_layout(
-            height=380, template="plotly_white", paper_bgcolor="#FAFAFA"
+            height=380, template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"), paper_bgcolor="#FFFFFF"
         )
         with st.container(border=True):
             st.plotly_chart(fig_risk, use_container_width=True)
@@ -590,9 +949,9 @@ def page_churn_risk(df):
         )
         fig_shap.update_layout(
             height=400,
-            template="plotly_white",
+            template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"),
             yaxis=dict(autorange="reversed"),
-            paper_bgcolor="#FAFAFA",
+            paper_bgcolor="#FFFFFF",
         )
         with st.container(border=True):
             st.plotly_chart(fig_shap, use_container_width=True)
@@ -726,7 +1085,7 @@ def page_uplift(df):
             annotation_text="Churn threshold",
         )
         fig_scatter.update_traces(marker=dict(size=5))
-        fig_scatter.update_layout(height=450, template="plotly_white")
+        fig_scatter.update_layout(height=450, template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"))
         st.plotly_chart(fig_scatter, use_container_width=True)
 
     with col_right:
@@ -810,7 +1169,7 @@ def page_uplift(df):
         color_discrete_map=SEGMENT_COLORS,
         title="Uplift Score Distribution — which segments are most responsive to intervention?",
     )
-    fig_up.update_layout(height=380, template="plotly_white", showlegend=False)
+    fig_up.update_layout(height=380, template="plotly_white", font=dict(family="Inter, sans-serif", color="#334155"), showlegend=False)
     st.plotly_chart(fig_up, use_container_width=True)
 
 
@@ -1253,6 +1612,8 @@ and CSMs can mark outcomes (Retained / Churned / Pending) directly on each actio
 
 # ─── Main App ────────────────────────────────────────────────────────────────
 def main():
+    _inject_css()
+
     # Check if pipeline has been run
     uplift_path = os.path.join(PROCESSED_PATH, "uplift.parquet")
     if not os.path.exists(uplift_path):
