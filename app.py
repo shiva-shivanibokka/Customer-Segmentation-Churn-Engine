@@ -49,254 +49,309 @@ st.set_page_config(
 def _inject_css():
     st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
 
     /* ── BASE ──────────────────────────────────────────────────────────────── */
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        background: #F8FAFC !important;
+        background: #F0F4FF !important;
+        font-size: 15px !important;
     }
-
+    p, li, span, div, label {
+        font-size: 15px !important;
+        line-height: 1.6 !important;
+    }
     .main .block-container {
-        padding-top: 2rem;
+        padding-top: 1.75rem;
         padding-bottom: 3rem;
-        max-width: 1280px;
+        max-width: 1320px;
     }
 
-    /* ── SIDEBAR — dark navy (the signature element) ───────────────────────── */
+    /* ── SIDEBAR — vibrant indigo (visible, energetic, not depressing) ──────── */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(175deg, #0F172A 0%, #1E293B 100%) !important;
-        border-right: 1px solid rgba(255,255,255,0.06) !important;
+        background: linear-gradient(160deg, #3730A3 0%, #4F46E5 60%, #6366F1 100%) !important;
+        border-right: none !important;
+        box-shadow: 4px 0 24px rgba(79,70,229,0.18) !important;
     }
     section[data-testid="stSidebar"] > div {
         background: transparent !important;
     }
-
-    /* Sidebar text */
     section[data-testid="stSidebar"] p,
     section[data-testid="stSidebar"] span:not([data-testid]),
-    section[data-testid="stSidebar"] label {
-        color: #94A3B8 !important;
-        font-size: 0.875rem !important;
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] div {
+        color: #E0E7FF !important;
+        font-size: 15px !important;
     }
     section[data-testid="stSidebar"] h1,
     section[data-testid="stSidebar"] h2,
     section[data-testid="stSidebar"] h3 {
-        color: #F1F5F9 !important;
+        color: #FFFFFF !important;
         border-bottom: none !important;
-        text-transform: none !important;
-        letter-spacing: normal !important;
-        font-size: 0.75rem !important;
         text-transform: uppercase !important;
         letter-spacing: 0.1em !important;
-        color: #475569 !important;
+        font-size: 11px !important;
     }
     section[data-testid="stSidebar"] hr {
-        border-color: rgba(255,255,255,0.08) !important;
+        border-color: rgba(255,255,255,0.2) !important;
     }
 
-    /* Nav radio labels */
+    /* Sidebar nav labels */
     section[data-testid="stSidebar"] [data-testid="stRadio"] label {
-        color: #94A3B8 !important;
+        color: #C7D2FE !important;
         font-weight: 500 !important;
-        padding: 0.35rem 0.75rem !important;
-        border-radius: 7px !important;
-        display: block;
-        transition: color 0.15s, background 0.15s !important;
-        cursor: pointer;
+        font-size: 15px !important;
+        padding: 0.4rem 0.8rem !important;
+        border-radius: 8px !important;
+        transition: all 0.15s !important;
     }
     section[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-        color: #F1F5F9 !important;
-        background: rgba(79, 70, 229, 0.18) !important;
+        color: #FFFFFF !important;
+        background: rgba(255,255,255,0.15) !important;
     }
-    section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-checked="true"],
     section[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
         color: #FFFFFF !important;
-        background: rgba(79, 70, 229, 0.32) !important;
+        background: rgba(255,255,255,0.22) !important;
+        font-weight: 600 !important;
     }
 
-    /* Sidebar inputs */
+    /* Sidebar inputs — white on indigo */
     section[data-testid="stSidebar"] input[type="text"],
     section[data-testid="stSidebar"] input[type="password"],
     section[data-testid="stSidebar"] input[type="number"] {
-        background: rgba(255,255,255,0.07) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
-        border-radius: 7px !important;
-        color: #F1F5F9 !important;
+        background: rgba(255,255,255,0.15) !important;
+        border: 1.5px solid rgba(255,255,255,0.35) !important;
+        border-radius: 8px !important;
+        color: #FFFFFF !important;
+        font-size: 15px !important;
         font-family: 'Inter', sans-serif !important;
     }
     section[data-testid="stSidebar"] input::placeholder {
-        color: #475569 !important;
+        color: rgba(255,255,255,0.5) !important;
     }
     section[data-testid="stSidebar"] [data-testid="stNumberInput"] button {
-        background: rgba(255,255,255,0.08) !important;
-        border-color: rgba(255,255,255,0.12) !important;
-        color: #94A3B8 !important;
+        background: rgba(255,255,255,0.15) !important;
+        border-color: rgba(255,255,255,0.25) !important;
+        color: #FFFFFF !important;
     }
-
-    /* Sidebar success/error chips */
-    section[data-testid="stSidebar"] [data-testid="stAlert"][data-baseweb="notification"] {
+    section[data-testid="stSidebar"] [data-testid="stAlert"] {
         border-radius: 8px !important;
-        font-size: 0.8125rem !important;
+        font-size: 13px !important;
     }
 
     /* ── HEADINGS ──────────────────────────────────────────────────────────── */
     h1 {
-        font-family: 'Inter', sans-serif !important;
-        font-size: 1.75rem !important;
+        font-size: 26px !important;
         font-weight: 700 !important;
-        color: #0F172A !important;
-        letter-spacing: -0.03em !important;
-        padding-bottom: 0.75rem !important;
-        margin-bottom: 1.5rem !important;
+        color: #1E1B4B !important;
+        letter-spacing: -0.025em !important;
+        padding-bottom: 0.6rem !important;
+        margin-bottom: 1.25rem !important;
         border-bottom: 3px solid #4F46E5 !important;
+        line-height: 1.25 !important;
     }
     h2 {
-        font-family: 'Inter', sans-serif !important;
-        font-size: 1.125rem !important;
+        font-size: 18px !important;
         font-weight: 600 !important;
-        color: #1E293B !important;
-        letter-spacing: -0.015em !important;
+        color: #1E1B4B !important;
+        letter-spacing: -0.01em !important;
+        line-height: 1.35 !important;
     }
     h3 {
-        font-family: 'Inter', sans-serif !important;
-        font-size: 0.75rem !important;
-        font-weight: 600 !important;
-        color: #64748B !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        color: #6366F1 !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.08em !important;
+        letter-spacing: 0.1em !important;
+        line-height: 1.4 !important;
     }
 
-    /* ── BUTTONS ───────────────────────────────────────────────────────────── */
+    /* ── BUTTONS — bold, colorful, gem-like ─────────────────────────────────── */
     .stButton > button {
-        background: #4F46E5 !important;
+        background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
         color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 8px !important;
+        border: 1.5px solid #4338CA !important;
+        border-radius: 9px !important;
         font-family: 'Inter', sans-serif !important;
         font-weight: 600 !important;
-        font-size: 0.875rem !important;
-        padding: 0.5rem 1.25rem !important;
+        font-size: 15px !important;
+        padding: 0.5rem 1.4rem !important;
         letter-spacing: 0.01em !important;
-        box-shadow: 0 1px 3px rgba(79,70,229,0.25), 0 1px 2px rgba(0,0,0,0.06) !important;
-        transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important;
-        height: auto !important;
+        box-shadow: 0 2px 8px rgba(79,70,229,0.35), 0 1px 0 rgba(255,255,255,0.15) inset !important;
+        transition: all 0.15s ease !important;
         line-height: 1.5 !important;
     }
     .stButton > button:hover {
-        background: #4338CA !important;
-        box-shadow: 0 4px 16px rgba(79,70,229,0.38), 0 2px 6px rgba(0,0,0,0.08) !important;
-        transform: translateY(-1px) !important;
+        background: linear-gradient(135deg, #818CF8 0%, #6366F1 100%) !important;
+        border-color: #6366F1 !important;
+        box-shadow: 0 6px 20px rgba(79,70,229,0.45), 0 1px 0 rgba(255,255,255,0.2) inset !important;
+        transform: translateY(-2px) !important;
     }
     .stButton > button:active {
-        background: #3730A3 !important;
         transform: translateY(0) !important;
-        box-shadow: 0 1px 3px rgba(79,70,229,0.25) !important;
+        box-shadow: 0 2px 6px rgba(79,70,229,0.3) !important;
     }
-    .stButton > button:focus:not(:active) {
-        outline: 2px solid #818CF8 !important;
-        outline-offset: 2px !important;
-    }
-
-    /* Download buttons get amber treatment */
     [data-testid="stDownloadButton"] > button {
-        background: #D97706 !important;
-        box-shadow: 0 1px 3px rgba(217,119,6,0.25) !important;
+        background: linear-gradient(135deg, #34D399 0%, #10B981 100%) !important;
+        border-color: #059669 !important;
+        box-shadow: 0 2px 8px rgba(16,185,129,0.35) !important;
     }
     [data-testid="stDownloadButton"] > button:hover {
-        background: #B45309 !important;
-        box-shadow: 0 4px 16px rgba(217,119,6,0.38) !important;
+        background: linear-gradient(135deg, #6EE7B7 0%, #34D399 100%) !important;
+        box-shadow: 0 6px 20px rgba(16,185,129,0.45) !important;
     }
 
-    /* ── METRIC CARDS ──────────────────────────────────────────────────────── */
+    /* ── DROPDOWNS & SELECTS — white bg, strong visible border ─────────────── */
+    [data-baseweb="select"] > div:first-child {
+        background: #FFFFFF !important;
+        border: 2px solid #A5B4FC !important;
+        border-radius: 9px !important;
+        font-size: 15px !important;
+        color: #1E1B4B !important;
+        transition: border-color 0.15s, box-shadow 0.15s !important;
+    }
+    [data-baseweb="select"] > div:first-child:hover {
+        border-color: #6366F1 !important;
+    }
+    [data-baseweb="select"]:focus-within > div:first-child {
+        border-color: #4F46E5 !important;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.18) !important;
+    }
+    /* Dropdown option list */
+    [data-baseweb="popover"] ul,
+    [data-baseweb="menu"] {
+        background: #FFFFFF !important;
+        border: 1.5px solid #C7D2FE !important;
+        border-radius: 10px !important;
+        box-shadow: 0 8px 30px rgba(79,70,229,0.15) !important;
+    }
+    [data-baseweb="option"]:hover,
+    [data-baseweb="option"][aria-selected="true"] {
+        background: #EEF2FF !important;
+        color: #4338CA !important;
+    }
+
+    /* Text inputs */
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextArea"] textarea,
+    [data-testid="stNumberInput"] input {
+        background: #FFFFFF !important;
+        border: 2px solid #A5B4FC !important;
+        border-radius: 9px !important;
+        font-size: 15px !important;
+        color: #1E1B4B !important;
+        font-family: 'Inter', sans-serif !important;
+        transition: border-color 0.15s, box-shadow 0.15s !important;
+    }
+    [data-testid="stTextInput"] input:focus,
+    [data-testid="stTextArea"] textarea:focus,
+    [data-testid="stNumberInput"] input:focus {
+        border-color: #4F46E5 !important;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.18) !important;
+        outline: none !important;
+    }
+
+    /* Multiselect */
+    [data-testid="stMultiSelect"] > div > div {
+        background: #FFFFFF !important;
+        border: 2px solid #A5B4FC !important;
+        border-radius: 9px !important;
+    }
+    [data-baseweb="tag"] {
+        background: #EEF2FF !important;
+        color: #4338CA !important;
+        border: 1px solid #C7D2FE !important;
+        border-radius: 6px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+
+    /* ── METRIC CARDS — white, colored accents ──────────────────────────────── */
     [data-testid="stMetric"] {
         background: #FFFFFF !important;
-        border-radius: 12px !important;
-        padding: 1rem 1.25rem 1rem 1.25rem !important;
-        border: 1px solid #E2E8F0 !important;
-        border-left: 4px solid #4F46E5 !important;
-        box-shadow: 0 1px 3px rgba(15,23,42,0.06) !important;
-        transition: box-shadow 0.2s !important;
+        border-radius: 14px !important;
+        padding: 1.1rem 1.25rem !important;
+        border: 1.5px solid #E0E7FF !important;
+        border-top: 4px solid #6366F1 !important;
+        box-shadow: 0 2px 12px rgba(79,70,229,0.09) !important;
+        transition: box-shadow 0.2s, transform 0.15s !important;
     }
     [data-testid="stMetric"]:hover {
-        box-shadow: 0 4px 12px rgba(15,23,42,0.10) !important;
+        box-shadow: 0 6px 24px rgba(79,70,229,0.16) !important;
+        transform: translateY(-2px) !important;
     }
     [data-testid="stMetricLabel"] > div {
-        font-size: 0.6875rem !important;
+        font-size: 12px !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
         letter-spacing: 0.08em !important;
-        color: #64748B !important;
+        color: #6366F1 !important;
     }
     [data-testid="stMetricValue"] > div {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 1.625rem !important;
+        font-size: 28px !important;
         font-weight: 600 !important;
-        color: #0F172A !important;
+        color: #1E1B4B !important;
         letter-spacing: -0.02em !important;
     }
     [data-testid="stMetricDelta"] > div {
-        font-size: 0.8125rem !important;
-        font-weight: 500 !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
     }
 
     /* ── TABS ──────────────────────────────────────────────────────────────── */
     .stTabs [data-baseweb="tab-list"] {
         background: transparent !important;
-        border-bottom: 2px solid #E2E8F0 !important;
+        border-bottom: 2.5px solid #E0E7FF !important;
         gap: 0 !important;
-        padding-bottom: 0 !important;
     }
     .stTabs [data-baseweb="tab"] {
-        font-family: 'Inter', sans-serif !important;
+        font-size: 15px !important;
         font-weight: 600 !important;
-        font-size: 0.875rem !important;
-        color: #64748B !important;
+        color: #6B7280 !important;
         background: transparent !important;
-        border: none !important;
-        border-bottom: 2px solid transparent !important;
-        margin-bottom: -2px !important;
-        padding: 0.625rem 1.125rem !important;
-        border-radius: 6px 6px 0 0 !important;
+        border-bottom: 3px solid transparent !important;
+        margin-bottom: -2.5px !important;
+        padding: 0.6rem 1.2rem !important;
+        border-radius: 7px 7px 0 0 !important;
         transition: color 0.15s, background 0.15s !important;
     }
     .stTabs [data-baseweb="tab"]:hover {
         color: #4F46E5 !important;
-        background: rgba(79,70,229,0.05) !important;
+        background: #EEF2FF !important;
     }
     .stTabs [aria-selected="true"] {
         color: #4F46E5 !important;
-        border-bottom: 2px solid #4F46E5 !important;
+        border-bottom: 3px solid #4F46E5 !important;
         background: transparent !important;
     }
     .stTabs [data-baseweb="tab-panel"] {
         padding-top: 1.25rem !important;
     }
 
-    /* ── BORDERED CONTAINERS (st.container(border=True)) ───────────────────── */
+    /* ── BORDERED CONTAINERS ────────────────────────────────────────────────── */
     [data-testid="stVerticalBlockBorderWrapper"] {
         background: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 1px 4px rgba(15,23,42,0.05) !important;
+        border: 1.5px solid #E0E7FF !important;
+        border-radius: 14px !important;
+        box-shadow: 0 2px 10px rgba(79,70,229,0.07) !important;
         overflow: hidden !important;
     }
 
     /* ── EXPANDERS ─────────────────────────────────────────────────────────── */
     [data-testid="stExpander"] {
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 10px !important;
+        border: 1.5px solid #E0E7FF !important;
+        border-radius: 12px !important;
         background: #FFFFFF !important;
-        box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
+        box-shadow: 0 2px 8px rgba(79,70,229,0.06) !important;
         overflow: hidden !important;
     }
     [data-testid="stExpander"] summary {
-        font-family: 'Inter', sans-serif !important;
+        font-size: 15px !important;
         font-weight: 600 !important;
-        font-size: 0.875rem !important;
-        color: #334155 !important;
-        padding: 0.75rem 1rem !important;
-        background: #F8FAFC !important;
+        color: #1E1B4B !important;
+        padding: 0.8rem 1rem !important;
+        background: #F5F3FF !important;
         transition: background 0.15s !important;
     }
     [data-testid="stExpander"] summary:hover {
@@ -306,87 +361,78 @@ def _inject_css():
     [data-testid="stExpander"][open] > summary {
         background: #EEF2FF !important;
         color: #4F46E5 !important;
-        border-bottom: 1px solid #E0E7FF !important;
+        border-bottom: 1.5px solid #E0E7FF !important;
     }
 
-    /* ── ALERTS & INFO BOXES ───────────────────────────────────────────────── */
+    /* ── ALERTS ─────────────────────────────────────────────────────────────── */
     [data-testid="stAlert"] {
         border-radius: 10px !important;
-        font-size: 0.875rem !important;
+        font-size: 15px !important;
         font-family: 'Inter', sans-serif !important;
     }
 
-    /* ── INPUTS (main content area) ────────────────────────────────────────── */
-    .main [data-testid="stTextInput"] input,
-    .main [data-testid="stTextArea"] textarea {
-        border-radius: 8px !important;
-        border: 1.5px solid #E2E8F0 !important;
-        font-family: 'Inter', sans-serif !important;
-        font-size: 0.875rem !important;
-        color: #0F172A !important;
-        background: #FFFFFF !important;
-        transition: border-color 0.15s, box-shadow 0.15s !important;
-    }
-    .main [data-testid="stTextInput"] input:focus,
-    .main [data-testid="stTextArea"] textarea:focus {
-        border-color: #4F46E5 !important;
-        box-shadow: 0 0 0 3px rgba(79,70,229,0.14) !important;
-        outline: none !important;
-    }
-    .main [data-testid="stSelectbox"] > div > div,
-    .main [data-testid="stMultiSelect"] > div > div {
-        border-radius: 8px !important;
-        border: 1.5px solid #E2E8F0 !important;
-        font-family: 'Inter', sans-serif !important;
-    }
-
-    /* ── TOGGLE ────────────────────────────────────────────────────────────── */
+    /* ── TOGGLE ─────────────────────────────────────────────────────────────── */
     [role="switch"][aria-checked="true"] {
         background-color: #4F46E5 !important;
     }
 
-    /* ── MULTISELECT TAGS ──────────────────────────────────────────────────── */
-    [data-baseweb="tag"] {
-        background: #EEF2FF !important;
-        color: #4338CA !important;
-        border-radius: 6px !important;
-        font-size: 0.8125rem !important;
-        font-weight: 500 !important;
-    }
-
-    /* ── DATAFRAME ─────────────────────────────────────────────────────────── */
+    /* ── DATAFRAMES ─────────────────────────────────────────────────────────── */
     [data-testid="stDataFrame"] {
-        border-radius: 10px !important;
+        border-radius: 12px !important;
         overflow: hidden !important;
-        border: 1px solid #E2E8F0 !important;
+        border: 1.5px solid #E0E7FF !important;
     }
 
-    /* ── CHAT ──────────────────────────────────────────────────────────────── */
+    /* ── CHART CONTAINERS — consistent top-alignment ────────────────────────── */
+    [data-testid="stPlotlyChart"] {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+    }
+
+    /* ── CHAT — fully light ─────────────────────────────────────────────────── */
     [data-testid="stChatMessage"] {
         border-radius: 12px !important;
         background: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
-        margin-bottom: 0.625rem !important;
+        border: 1.5px solid #E0E7FF !important;
+        box-shadow: 0 2px 8px rgba(79,70,229,0.06) !important;
+        margin-bottom: 0.75rem !important;
+        font-size: 15px !important;
     }
-    [data-testid="stChatInputContainer"] {
-        border-top: 1px solid #E2E8F0 !important;
+    [data-testid="stChatInputContainer"],
+    [data-testid="stChatInput"] {
         background: #FFFFFF !important;
-        padding-top: 0.75rem !important;
+        border-top: 1.5px solid #E0E7FF !important;
+    }
+    [data-testid="stChatInput"] textarea {
+        background: #FFFFFF !important;
+        border: 2px solid #A5B4FC !important;
+        border-radius: 10px !important;
+        color: #1E1B4B !important;
+        font-size: 15px !important;
+        font-family: 'Inter', sans-serif !important;
+    }
+    [data-testid="stChatInput"] textarea:focus {
+        border-color: #4F46E5 !important;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.18) !important;
     }
 
     /* ── CAPTIONS ──────────────────────────────────────────────────────────── */
     [data-testid="stCaptionContainer"] p,
-    .stCaption {
-        color: #94A3B8 !important;
-        font-size: 0.8rem !important;
-        font-family: 'Inter', sans-serif !important;
+    .stCaption, small {
+        color: #818CF8 !important;
+        font-size: 13px !important;
     }
 
     /* ── DIVIDERS ──────────────────────────────────────────────────────────── */
     hr {
-        border-color: #E2E8F0 !important;
-        margin: 1.25rem 0 !important;
+        border-color: #E0E7FF !important;
+        margin: 1.5rem 0 !important;
+    }
+
+    /* ── SLIDER ─────────────────────────────────────────────────────────────── */
+    [data-testid="stSlider"] [role="slider"] {
+        background: #4F46E5 !important;
+        border: 2px solid #6366F1 !important;
     }
 
     /* ── HIDE STREAMLIT CHROME ─────────────────────────────────────────────── */
