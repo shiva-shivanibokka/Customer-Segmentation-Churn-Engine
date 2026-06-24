@@ -1,9 +1,12 @@
-import { getCustomers } from "@/lib/data";
+import { getSegmentSummary, getCustomers } from "@/lib/data";
 import { SegmentationClient } from "@/components/pages/segmentation-client";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export default async function SegmentationPage() {
-  const customers = await getCustomers();
-  return <SegmentationClient customers={customers} />;
+  const [summary, customers] = await Promise.all([
+    getSegmentSummary(),
+    getCustomers(),
+  ]);
+  return <SegmentationClient summary={summary} customers={customers} />;
 }

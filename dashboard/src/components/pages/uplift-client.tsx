@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Customer } from "@/lib/supabase";
+import { UpliftKpis, CustomerTypeSummary, RoiBySegment, TopPersuadable } from "@/lib/data";
 import { PageTitle, SectionHeading } from "@/components/ui/section-heading";
 import { MetricCard } from "@/components/ui/metric-card";
 import { ChartCard } from "@/components/ui/chart-card";
@@ -24,18 +25,16 @@ const TYPE_DESCRIPTIONS: Record<string, string> = {
   "Sleeping Dog": "Low churn risk but intervention might actually trigger them to leave — leave alone",
 };
 
-interface Props { customers: Customer[] }
+interface Props {
+  kpis: UpliftKpis;
+  typeSummary: CustomerTypeSummary[];
+  roiBySeg: RoiBySegment[];
+  topPersuadables: TopPersuadable[];
+  customers: Customer[];
+}
 
-export function UpliftClient({ customers }: Props) {
-  const kpis = useMemo(() => {
-    const persuadable = customers.filter((c) => c.customer_type === "Persuadable").length;
-    const positiveROI = customers.filter((c) => c.roi_positive).length;
-    const avgUplift = customers.reduce((s, c) => s + c.uplift_score, 0) / customers.length;
-    const totalROI = customers.filter((c) => c.roi_positive).reduce((s, c) => s + c.net_roi, 0);
-    return { persuadable, positiveROI, avgUplift, totalROI };
-  }, [customers]);
-
-  // Uplift vs ChurnProb scatter by customer type
+export function UpliftClient({ kpis, typeSummary, roiBySeg, topPersuadables, customers }: Props) {
+  // Scatter plot uses sampled customer data for churn_prob vs uplift_score
   const byType = useMemo(() => {
     const types = [...new Set(customers.map((c) => c.customer_type))];
     return types.map((t) => {
@@ -53,36 +52,18 @@ export function UpliftClient({ customers }: Props) {
     });
   }, [customers]);
 
-  // ROI by segment
-  const roiBySegment = useMemo(() => {
-    const segs = [...new Set(customers.map((c) => c.segment))];
-    return segs.map((seg) => {
-      const rows = customers.filter((c) => c.segment === seg && c.customer_type === "Persuadable");
-      return {
-        segment: seg,
-        avgROI: rows.length ? rows.reduce((s, c) => s + c.net_roi, 0) / rows.length : 0,
-        count: rows.length,
-      };
-    }).sort((a, b) => b.avgROI - a.avgROI);
-  }, [customers]);
+  const typeDistribution = useMemo(() =>
+    typeSummary.map((t) => ({
+      type: t.customer_type,
+      count: t.count,
+      color: TYPE_COLORS[t.customer_type] ?? "#6B7280",
+    })),
+    [typeSummary]
+  );
 
-  // Customer type distribution
-  const typeDistribution = useMemo(() => {
-    const types = [...new Set(customers.map((c) => c.customer_type))];
-    return types.map((t) => ({
-      type: t,
-      count: customers.filter((c) => c.customer_type === t).length,
-      color: TYPE_COLORS[t] ?? "#6B7280",
-    }));
-  }, [customers]);
-
-  // Top Persuadables table
-  const topPersuadables = useMemo(() =>
-    customers
-      .filter((c) => c.customer_type === "Persuadable")
-      .sort((a, b) => b.net_roi - a.net_roi)
-      .slice(0, 15),
-    [customers]
+  const roiBySegment = useMemo(() =>
+    roiBySeg.map((r) => ({ segment: r.segment, avgROI: r.avg_roi, count: r.persuadable_count })),
+    [roiBySeg]
   );
 
   return (
@@ -108,10 +89,10 @@ export function UpliftClient({ customers }: Props) {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <MetricCard label="Persuadables" value={kpis.persuadable.toLocaleString()} delta="Worth targeting" accentColor="#6366F1" />
-        <MetricCard label="Positive ROI Interventions" value={kpis.positiveROI.toLocaleString()} delta="Financially justified" accentColor="#10B981" />
-        <MetricCard label="Avg Uplift Score" value={kpis.avgUplift >= 0 ? `+${(kpis.avgUplift * 100).toFixed(2)}%` : `${(kpis.avgUplift * 100).toFixed(2)}%`} accentColor="#A855F7" />
-        <MetricCard label="Total ROI Potential" value={`$${(kpis.totalROI / 1000).toFixed(0)}k`} delta="From Persuadables only" accentColor="#F59E0B" />
+        <MetricCard label="Persuadables" value={kpis.persuadable_count.toLocaleString()} delta="Worth targeting" accentColor="#6366F1" />
+        <MetricCard label="Positive ROI Interventions" value={kpis.positive_roi_count.toLocaleString()} delta="Financially justified" accentColor="#10B981" />
+        <MetricCard label="Avg Uplift Score" value={kpis.avg_uplift_score >= 0 ? `+${(kpis.avg_uplift_score * 100).toFixed(2)}%` : `${(kpis.avg_uplift_score * 100).toFixed(2)}%`} accentColor="#A855F7" />
+        <MetricCard label="Total ROI Potential" value={`$${(kpis.total_roi_potential / 1000).toFixed(0)}k`} delta="From Persuadables only" accentColor="#F59E0B" />
       </div>
 
       {/* Uplift quadrant scatter */}
@@ -225,6 +206,7 @@ export function UpliftClient({ customers }: Props) {
                 <td className="px-4 py-2.5 text-[#6B7280]">{c.intervention_priority ?? "—"}</td>
               </tr>
             ))}
+
           </tbody>
         </table>
       </div>

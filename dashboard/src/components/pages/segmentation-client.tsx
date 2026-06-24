@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Customer } from "@/lib/supabase";
+import { SegmentSummaryRow } from "@/lib/data";
 import { PageTitle, SectionHeading } from "@/components/ui/section-heading";
 import { MetricCard } from "@/components/ui/metric-card";
 import { ChartCard } from "@/components/ui/chart-card";
@@ -72,9 +73,9 @@ const UMAP_CAPTIONS: Record<string, { label: string; caption: string }> = {
   },
 };
 
-interface Props { customers: Customer[] }
+interface Props { summary: SegmentSummaryRow[]; customers: Customer[] }
 
-export function SegmentationClient({ customers }: Props) {
+export function SegmentationClient({ summary, customers }: Props) {
   const [colorBy, setColorBy] = useState("Segment");
   const [showDefs, setShowDefs] = useState(false);
 
@@ -318,29 +319,23 @@ export function SegmentationClient({ customers }: Props) {
             </tr>
           </thead>
           <tbody>
-            {kpiData.map((k, i) => {
-              const rows = segments[k.segment];
-              const avgProb = rows.reduce((s, r) => s + r.churn_probability, 0) / rows.length;
-              const highRisk = rows.filter((r) => r.risk_tier === "High Risk").length / rows.length;
-              const persuadable = rows.filter((r) => r.customer_type === "Persuadable").length / rows.length;
-              return (
-                <tr key={k.segment} className={i % 2 === 0 ? "bg-white" : "bg-[#F5F3FF]"}>
-                  <td className="px-4 py-3 font-semibold">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: k.color }} />
-                      {k.segment}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">{k.count.toLocaleString()}</td>
-                  <td className="px-4 py-3 font-semibold" style={{ color: k.churnRate > 0.3 ? "#F43F5E" : k.churnRate > 0.15 ? "#F59E0B" : "#10B981" }}>
-                    {(k.churnRate * 100).toFixed(1)}%
-                  </td>
-                  <td className="px-4 py-3">{(avgProb * 100).toFixed(1)}%</td>
-                  <td className="px-4 py-3">{(highRisk * 100).toFixed(1)}%</td>
-                  <td className="px-4 py-3 font-semibold text-[#6366F1]">{(persuadable * 100).toFixed(1)}%</td>
-                </tr>
-              );
-            })}
+            {summary.map((s, i) => (
+              <tr key={s.segment} className={i % 2 === 0 ? "bg-white" : "bg-[#F5F3FF]"}>
+                <td className="px-4 py-3 font-semibold">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ background: SEGMENT_COLORS[s.segment] ?? "#6B7280" }} />
+                    {s.segment}
+                  </div>
+                </td>
+                <td className="px-4 py-3">{s.customer_count.toLocaleString()}</td>
+                <td className="px-4 py-3 font-semibold" style={{ color: s.churn_rate > 0.3 ? "#F43F5E" : s.churn_rate > 0.15 ? "#F59E0B" : "#10B981" }}>
+                  {(s.churn_rate * 100).toFixed(1)}%
+                </td>
+                <td className="px-4 py-3">{(s.avg_churn_prob * 100).toFixed(1)}%</td>
+                <td className="px-4 py-3">{(s.high_risk_pct * 100).toFixed(1)}%</td>
+                <td className="px-4 py-3 font-semibold text-[#6366F1]">{(s.persuadable_pct * 100).toFixed(1)}%</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
