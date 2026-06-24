@@ -1,0 +1,132 @@
+{
+  "high_supportriskscore": {
+    "intervention_type": "Proactive Support Call",
+    "channel": "Direct Call",
+    "timing": "Within 24 hours",
+    "cost_tier": "High ($50-100)",
+    "success_rate": "38%",
+    "rationale": "Elevated support risk means unresolved friction. A proactive call before the customer escalates shows the company is listening and turns a negative signal into a loyalty moment. This is the Zappos / Chewy model.",
+    "message_template": "Hi [Name], I noticed you recently had an issue with your order and I wanted to personally reach out to make sure everything was resolved to your satisfaction.",
+    "matched_features": ["SupportRiskScore", "Complain"]
+  },
+  "high_recencysignal": {
+    "intervention_type": "Reactivation Campaign",
+    "channel": "Email",
+    "timing": "Within 1 week",
+    "cost_tier": "Low ($1-5)",
+    "success_rate": "29%",
+    "rationale": "High recency signal means the customer has not purchased recently. Personalised email referencing their last purchase category with a time-limited offer achieves the highest re-engagement rate for dormant customers.",
+    "message_template": "We miss you! It's been a while since your last order. Here's 15% off your next purchase — valid for 7 days only.",
+    "matched_features": ["RecencySignal", "DaySinceLastOrder"]
+  },
+  "low_engagementscore": {
+    "intervention_type": "Personalized Content",
+    "channel": "In-App Notification",
+    "timing": "During next session",
+    "cost_tier": "Low ($1-5)",
+    "success_rate": "24%",
+    "rationale": "Low engagement means the customer is not finding value in the product. In-app personalized recommendations (based on past purchases) re-establish the value proposition. Netflix uses this pattern for disengaged subscribers.",
+    "message_template": "Based on your purchase history, you might love these new arrivals — curated just for you.",
+    "matched_features": ["EngagementScore", "HourSpendOnApp", "StickinessIndex"]
+  },
+  "low_satisfactionscore": {
+    "intervention_type": "Service Recovery",
+    "channel": "Email",
+    "timing": "Immediate",
+    "cost_tier": "Medium ($10-25)",
+    "success_rate": "41%",
+    "rationale": "Note: in this dataset, SatisfactionScore 1=satisfied, 5=very dissatisfied. High SatisfactionScore values indicate dissatisfaction. Service recovery with a meaningful gesture (credit, apology, upgrade) has the highest retention rate for dissatisfied customers.",
+    "message_template": "We're sorry your recent experience didn't meet your expectations. As a gesture of goodwill, we've added $20 credit to your account.",
+    "matched_features": ["SatisfactionScore"]
+  },
+  "high_satisfactionscore": {
+    "intervention_type": "Service Recovery",
+    "channel": "Direct Call",
+    "timing": "Within 24 hours",
+    "cost_tier": "High ($50-100)",
+    "success_rate": "41%",
+    "rationale": "High SatisfactionScore (1-5 scale, higher = more dissatisfied) indicates active dissatisfaction. Direct call with service recovery is the highest-ROI intervention for this group.",
+    "message_template": "We noticed your recent experience wasn't what we'd expect for a valued customer. I'd love to personally ensure we make this right.",
+    "matched_features": ["SatisfactionScore", "Complain"]
+  },
+  "high_complain": {
+    "intervention_type": "Service Recovery",
+    "channel": "Direct Call",
+    "timing": "Immediate",
+    "cost_tier": "High ($50-100)",
+    "success_rate": "41%",
+    "rationale": "A recent complaint is the single strongest leading indicator of imminent churn. Immediate personal outreach to resolve the complaint and offer a goodwill gesture has the highest ROI of any intervention type.",
+    "message_template": "I'm reaching out personally because we take every customer concern seriously. I'd like to understand what happened and make it right.",
+    "matched_features": ["Complain", "SupportRiskScore"]
+  },
+  "low_tenure": {
+    "intervention_type": "Loyalty Reward",
+    "channel": "In-App Notification",
+    "timing": "Within 1 week",
+    "cost_tier": "Medium ($10-25)",
+    "success_rate": "33%",
+    "rationale": "New customers (low tenure) have not yet formed a strong brand habit. An early loyalty reward accelerates habit formation and increases switching cost. Amazon Prime's 30-day free trial is the canonical example.",
+    "message_template": "Welcome to the family! As a valued new member, you've unlocked early access to our loyalty program — here's what that means for you.",
+    "matched_features": ["Tenure", "TenureStability"]
+  },
+  "low_stickiness": {
+    "intervention_type": "Personalized Content",
+    "channel": "Push Notification",
+    "timing": "Within 24 hours",
+    "cost_tier": "Low ($1-5)",
+    "success_rate": "22%",
+    "rationale": "Low stickiness (infrequent sessions relative to purchases) suggests the customer is not developing a platform habit. Push notifications with highly personalised product recommendations during high-intent moments can restart the habit loop.",
+    "message_template": "Your wishlist items are flying off the shelves — grab them before they're gone!",
+    "matched_features": ["StickinessIndex", "HourSpendOnApp"]
+  },
+  "high_discountsensitivity": {
+    "intervention_type": "Discount Offer",
+    "channel": "Email",
+    "timing": "Within 1 week",
+    "cost_tier": "Medium ($10-25)",
+    "success_rate": "35%",
+    "rationale": "Price-sensitive customers respond strongly to discount offers. Targeted discounts on their most-purchased categories have a significantly higher conversion rate than generic promotions.",
+    "message_template": "Here's an exclusive offer just for you: 20% off your favourite categories this week only.",
+    "matched_features": ["DiscountSensitivity", "CouponUsed", "CashbackAmount"]
+  },
+  "low_cashback": {
+    "intervention_type": "Loyalty Reward",
+    "channel": "Email",
+    "timing": "Within 1 week",
+    "cost_tier": "Low ($1-5)",
+    "success_rate": "28%",
+    "rationale": "Low cashback earned suggests the customer is not engaged with the loyalty programme. Highlighting unused benefits and adding bonus points creates a loss-aversion effect that re-engages them with the platform.",
+    "message_template": "Did you know you have unredeemed rewards waiting? Plus, we've added 150 bonus points to your account as a thank-you for being a loyal customer.",
+    "matched_features": ["CashbackAmount", "CouponUsed"]
+  },
+  "low_ordercount": {
+    "intervention_type": "Discount Offer",
+    "channel": "Email",
+    "timing": "Within 1 week",
+    "cost_tier": "Medium ($10-25)",
+    "success_rate": "31%",
+    "rationale": "Low order count with an active account suggests purchase hesitation. A targeted discount removes the price barrier and breaks the inactivity pattern, establishing the first purchase habit.",
+    "message_template": "You haven't placed an order in a while — here's 15% off to get started. No minimum spend required.",
+    "matched_features": ["OrderCount", "DaySinceLastOrder"]
+  },
+  "high_spendtrend": {
+    "intervention_type": "Premium Upgrade",
+    "channel": "In-App Notification",
+    "timing": "During next session",
+    "cost_tier": "Low ($1-5)",
+    "success_rate": "26%",
+    "rationale": "Increasing spend trend despite churn risk suggests a customer who values the product but may be comparison-shopping. A premium tier offer (exclusive benefits, priority service) locks in their spending with the platform.",
+    "message_template": "Based on your shopping patterns, you qualify for our exclusive membership tier — with priority delivery, extended returns, and member-only deals.",
+    "matched_features": ["SpendTrend"]
+  },
+  "default": {
+    "intervention_type": "Loyalty Reward",
+    "channel": "Email",
+    "timing": "Within 1 week",
+    "cost_tier": "Low ($1-5)",
+    "success_rate": "25%",
+    "rationale": "Default recommendation when no specific risk pattern is matched. Loyalty rewards have the broadest positive effect across all customer types and risk profiles.",
+    "message_template": "As one of our valued customers, we've added a special reward to your account. Here's what's waiting for you.",
+    "matched_features": []
+  }
+}

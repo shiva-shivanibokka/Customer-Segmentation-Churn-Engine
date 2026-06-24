@@ -4,16 +4,18 @@ Customer Segmentation & Churn Engine
 A decision intelligence platform that mirrors what Uber, Netflix,
 Salesforce, and HubSpot run in production for customer retention.
 
-Four pages:
+Five pages:
   1. Segmentation Explorer  — UMAP clusters, segment profiles, bootstrap stability
   2. Churn Risk Dashboard   — Per-segment models, calibrated probabilities, SHAP
   3. Uplift Intelligence    — Persuadable identification, ROI ranking, causal ML
-  4. Retention Actions      — LLM-generated intervention strategies per customer
+  4. Retention Actions      — Batch LLM plans + multi-turn AI Customer Assistant
+  5. Audit & Analytics      — Audit trail, outcome tracking, feedback loop
 """
 
 import os
 import sys
 import json
+import uuid
 import warnings
 import joblib
 
@@ -32,6 +34,7 @@ sys.path.insert(0, SRC_PATH)
 
 PROCESSED_PATH = os.path.join(os.path.dirname(__file__), "data", "processed")
 MODELS_PATH = os.path.join(os.path.dirname(__file__), "models")
+PLAYBOOK_PATH = os.path.join(os.path.dirname(__file__), "data", "playbook.json")
 
 # ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -87,6 +90,14 @@ def load_segment_models():
     return {}
 
 
+@st.cache_data
+def load_playbook() -> dict:
+    if os.path.exists(PLAYBOOK_PATH):
+        with open(PLAYBOOK_PATH) as f:
+            return json.load(f)
+    return {}
+
+
 def build_segment_profiles(df):
     cols = [
         "EngagementScore",
@@ -119,6 +130,7 @@ def render_sidebar(df):
             "Churn Risk Dashboard",
             "Uplift Intelligence",
             "Retention Actions",
+            "Audit & Analytics",
         ],
         index=0,
     )
@@ -800,159 +812,446 @@ def page_uplift(df):
     st.plotly_chart(fig_up, use_container_width=True)
 
 
+# ─── Retention Actions helpers ───────────────────────────────────────────────
+
+def _render_action_card(action: dict, agentic_mode: bool, db_action_id: str = None):
+    """Render a single retention action card with optional trace and feedback."""
+    import database as db
+
+    cid = action.get("customer_id", "N/A")
+    seg = action.get("segment", "N/A")
+    churn_p = action.get("churn_probability", 0)
+    uplift = action.get("uplift_score", 0)
+    roi = action.get("net_roi", 0)
+
+    with st.expander(
+        f"Customer {cid} | {seg} | Churn: {churn_p:.1%} | Uplift: {uplift:+.3f} | ROI: ${roi:.0f}",
+        expanded=True,
+    ):
+        # Show agent reasoning trace if available
+        trace = action.get("trace", [])
+        if agentic_mode and trace:
+            with st.expander(f"🔍 Agent reasoning — {len(trace)} tool call(s)", expanded=False):
+                for t in trace:
+                    st.markdown(f"**Round {t['round']} → `{t['tool']}`**")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.caption("Arguments sent")
+                        st.json(t["args"])
+                    with c2:
+                        st.caption("Data returned")
+                        st.json(t["result"])
+                    st.divider()
+
+        if action.get("error"):
+            st.error(f"Error: {action['error']}")
+            return
+
+        if action.get("do_not_intervene_reason"):
+            st.warning(f"No intervention recommended: {action['do_not_intervene_reason']}")
+            return
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Intervention", action.get("intervention_type", "N/A"))
+        col2.metric("Channel", action.get("channel", "N/A"))
+        col3.metric("Timing", action.get("timing", "N/A"))
+
+        col4, col5 = st.columns(2)
+        col4.metric("Estimated Cost", action.get("intervention_cost_estimate", "N/A"))
+        col5.metric("Model Confidence", action.get("confidence", "N/A"))
+
+        st.markdown(f"**Why at risk:** {action.get('primary_risk_reason', '')}")
+        st.markdown(f"**Will they respond?** {action.get('customer_receptivity', '')}")
+        st.markdown("**Suggested Message** *(copy-paste ready)*")
+        st.code(action.get("message_framing", ""), language=None)
+        st.markdown(f"**Expected outcome:** {action.get('expected_outcome', '')}")
+
+        # Feedback buttons (CSM marks outcome — writes to DB audit trail)
+        if db_action_id and db.is_available():
+            st.markdown("**Mark outcome after executing this intervention:**")
+            fb_col1, fb_col2, fb_col3 = st.columns(3)
+            if fb_col1.button("✅ Customer Retained", key=f"ret_{cid}"):
+                db.save_feedback(db_action_id, str(cid), "retained")
+                st.success("Outcome logged: Retained")
+            if fb_col2.button("❌ Customer Churned", key=f"chu_{cid}"):
+                db.save_feedback(db_action_id, str(cid), "churned")
+                st.warning("Outcome logged: Churned")
+            if fb_col3.button("⏳ Still Pending", key=f"pen_{cid}"):
+                db.save_feedback(db_action_id, str(cid), "pending")
+                st.info("Outcome logged: Pending")
+
+
+def _render_batch_tab(df, api_key, avg_clv, top_n, agentic_mode, playbook):
+    """Batch Generator tab — generate N action plans at once."""
+    import database as db
+
+    persuadables = df[df["CustomerType"] == "Persuadable"].nlargest(50, "NetROI").copy()
+    st.subheader(f"Top Persuadable Customers — {len(persuadables)} available")
+    st.caption(
+        "Only Persuadables are shown — customers with both high churn risk and positive "
+        "response to intervention. These are the only customers with positive expected ROI."
+    )
+    preview_cols = ["CustomerID", "Segment", "ChurnProbability", "UpliftScore", "NetROI", "SatisfactionScore", "Complain"]
+    preview_cols = [c for c in preview_cols if c in persuadables.columns]
+    st.dataframe(persuadables[preview_cols].reset_index(drop=True), use_container_width=True)
+
+    st.markdown("---")
+    mode_label = "Agentic (tool-calling)" if agentic_mode else "Standard (single prompt)"
+    if st.button(f"Generate {top_n} Retention Action Plans  [{mode_label}]", type="primary"):
+        seg_profiles = build_segment_profiles(df)
+
+        if agentic_mode:
+            from agent_loop import generate_batch_agentic
+            with st.spinner(f"Agentic mode: agent is calling tools for {top_n} customers..."):
+                actions = generate_batch_agentic(
+                    df_uplift=persuadables,
+                    df_full=df,
+                    playbook=playbook,
+                    segment_profiles=seg_profiles,
+                    api_key=api_key,
+                    top_n=top_n,
+                    avg_clv=avg_clv,
+                )
+        else:
+            from retention_llm import generate_batch_retention_actions
+            with st.spinner(f"Generating {top_n} retention action plans via Llama 3.3..."):
+                actions = generate_batch_retention_actions(
+                    df_uplift=persuadables,
+                    segment_profiles=seg_profiles,
+                    api_key=api_key,
+                    top_n=top_n,
+                    avg_clv=avg_clv,
+                )
+
+        st.success(f"Generated {len(actions)} plans.")
+
+        # CSV export
+        export_rows = [{
+            "CustomerID": a.get("customer_id"), "Segment": a.get("segment"),
+            "ChurnProbability": a.get("churn_probability"), "UpliftScore": a.get("uplift_score"),
+            "NetROI": a.get("net_roi"), "InterventionType": a.get("intervention_type"),
+            "Channel": a.get("channel"), "Timing": a.get("timing"),
+            "Cost": a.get("intervention_cost_estimate"), "Confidence": a.get("confidence"),
+            "WhyAtRisk": a.get("primary_risk_reason"), "SuggestedMessage": a.get("message_framing"),
+            "ExpectedOutcome": a.get("expected_outcome"),
+        } for a in actions]
+        st.download_button(
+            label="Export to CSV (CRM handoff)",
+            data=pd.DataFrame(export_rows).to_csv(index=False).encode("utf-8"),
+            file_name="retention_actions.csv",
+            mime="text/csv",
+            help="Import into Salesforce, HubSpot, or Marketo",
+        )
+
+        st.markdown("---")
+        for action in actions:
+            db_action_id = db.save_retention_action(action, agentic_mode=agentic_mode)
+            _render_action_card(action, agentic_mode=agentic_mode, db_action_id=db_action_id)
+
+
+def _render_chat_tab(df, api_key, playbook):
+    """AI Customer Assistant tab — multi-turn conversational agent."""
+    import database as db
+    from agent_loop import run_agentic_loop, SYSTEM_PROMPT_CHAT
+
+    st.subheader("AI Customer Assistant")
+    st.caption(
+        "Ask anything about your customers. The agent calls tools to look up real data "
+        "before answering. Unlike the batch generator, this is conversational — ask follow-up questions."
+    )
+    st.markdown(
+        "**Try:** *'Tell me about customer 50001'* · "
+        "*'Which At-Risk customers have the highest ROI?'* · "
+        "*'Is customer 50234 worth a $25 discount?'*"
+    )
+
+    # Initialise session state for this tab
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
+    if "agent_api_messages" not in st.session_state:
+        st.session_state.agent_api_messages = []
+    if "conversation_id" not in st.session_state:
+        st.session_state.conversation_id = None
+
+    # Load from DB if we have a session_id but no messages yet (page reload)
+    session_id = st.session_state.get("session_id", "local")
+    if not st.session_state.chat_messages and db.is_available():
+        loaded = db.load_conversation_messages(session_id)
+        if loaded:
+            st.session_state.chat_messages = loaded
+
+    # Clear chat button
+    if st.button("Clear conversation", key="clear_chat"):
+        st.session_state.chat_messages = []
+        st.session_state.agent_api_messages = []
+        st.session_state.conversation_id = None
+        st.rerun()
+
+    # Render existing messages
+    for msg in st.session_state.chat_messages:
+        with st.chat_message(msg["role"]):
+            trace = msg.get("trace", [])
+            if trace:
+                with st.expander(f"🔍 Agent used {len(trace)} tool(s)", expanded=False):
+                    for t in trace:
+                        st.markdown(f"**Round {t['round']} → `{t['tool']}`**")
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.caption("Arguments")
+                            st.json(t["args"])
+                        with c2:
+                            st.caption("Result")
+                            st.json(t["result"])
+                        st.divider()
+            st.markdown(msg["content"])
+
+    # Chat input
+    if prompt := st.chat_input("Ask about a customer, segment, or intervention strategy..."):
+        # Show user message immediately
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        # Build API message list
+        if not st.session_state.agent_api_messages:
+            st.session_state.agent_api_messages = [
+                {"role": "system", "content": SYSTEM_PROMPT_CHAT}
+            ]
+            # Create DB conversation on first message
+            if db.is_available():
+                conv_id = db.create_conversation(session_id)
+                st.session_state.conversation_id = conv_id
+
+        st.session_state.agent_api_messages.append({"role": "user", "content": prompt})
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
+
+        if db.is_available() and st.session_state.conversation_id:
+            db.save_message(st.session_state.conversation_id, "user", prompt)
+
+        # Run agent
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking — calling tools..."):
+                result = run_agentic_loop(
+                    messages=st.session_state.agent_api_messages,
+                    df=df,
+                    playbook=playbook,
+                    api_key=api_key,
+                )
+
+            trace = result.get("trace", [])
+            response = result.get("response") or "I wasn't able to generate a response. Please try again."
+
+            if result.get("error"):
+                st.error(f"Agent error: {result['error']}")
+                return
+
+            # Show tool trace
+            if trace:
+                with st.expander(f"🔍 Agent used {len(trace)} tool(s) to answer this", expanded=False):
+                    for t in trace:
+                        st.markdown(f"**Round {t['round']} → `{t['tool']}`**")
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.caption("Arguments")
+                            st.json(t["args"])
+                        with c2:
+                            st.caption("Result")
+                            st.json(t["result"])
+                        st.divider()
+
+            st.markdown(response)
+
+        # Persist to session state and DB
+        assistant_msg = {"role": "assistant", "content": response, "trace": trace}
+        st.session_state.chat_messages.append(assistant_msg)
+        st.session_state.agent_api_messages = result.get("messages", st.session_state.agent_api_messages)
+
+        if db.is_available() and st.session_state.conversation_id:
+            db.save_message(
+                st.session_state.conversation_id, "assistant", response, tool_calls=trace
+            )
+
+
 # ─── Page 4: Retention Actions ──────────────────────────────────────────────
 def page_retention_actions(df):
     st.title("LLM-Powered Retention Actions")
     st.markdown(
-        "For each Persuadable customer, Llama 3.3 (via Groq) analyzes their **SHAP risk factors**, "
-        "**segment profile**, **churn probability**, and **uplift score** to generate "
-        "a structured retention strategy: intervention type, channel, timing, message "
-        "framing, and estimated ROI. This mirrors Salesforce Einstein Copilot's "
-        "CSM playbook generation."
+        "Two modes: **Batch Generator** produces structured action plans for your top Persuadables. "
+        "**AI Customer Assistant** is a multi-turn conversational agent — ask anything about "
+        "specific customers and it calls tools to retrieve real data before answering. "
+        "Both use Llama 3.3 70B via Groq. This mirrors Salesforce Einstein Copilot's architecture."
     )
 
-    # ── API Key Input ────────────────────────────────────────────────────────
+    # ── Sidebar controls ─────────────────────────────────────────────────────
     st.sidebar.markdown("---")
     st.sidebar.subheader("Groq API Key")
     api_key = st.sidebar.text_input(
         "Groq API Key (free)",
         type="password",
         placeholder="gsk_...",
-        help="Free at console.groq.com — required for LLM retention action generation",
+        help="Free at console.groq.com — required for LLM features",
     )
     avg_clv = st.sidebar.number_input("Customer Lifetime Value ($)", value=500, step=50)
-    top_n = st.sidebar.slider("Customers to generate actions for", 1, 20, 5)
-
-    # ── Persuadable Preview ─────────────────────────────────────────────────
-    persuadables = df[df["CustomerType"] == "Persuadable"].nlargest(50, "NetROI").copy()
-
-    st.subheader(f"Top Persuadable Customers ({len(persuadables)} shown)")
-    preview_cols = [
-        "CustomerID",
-        "Segment",
-        "ChurnProbability",
-        "UpliftScore",
-        "NetROI",
-        "SatisfactionScore",
-        "Complain",
-        "HourSpendOnApp",
-    ]
-    preview_cols = [c for c in preview_cols if c in persuadables.columns]
-    st.dataframe(
-        persuadables[preview_cols].reset_index(drop=True), use_container_width=True
+    top_n = st.sidebar.slider("Batch: customers to generate", 1, 20, 5)
+    agentic_mode = st.sidebar.toggle(
+        "Agentic Mode",
+        value=False,
+        help="When ON: agent decides what data to retrieve using tool calls. Shows full reasoning trace. When OFF: classic single-prompt generation.",
     )
+
+    playbook = load_playbook()
+
+    # ── No API key — show production workflow explainer ──────────────────────
+    if not api_key:
+        st.info(
+            "Enter your free Groq API key in the sidebar. "
+            "Get one at **console.groq.com** — 2 minutes, no credit card."
+        )
+        st.markdown("---")
+        st.markdown("### How this mirrors production (Salesforce / HubSpot pattern)")
+        st.markdown("""
+| Step | What happens | Tool |
+|------|-------------|------|
+| 1. Score | Churn model scores all customers nightly | XGBoost (this engine) |
+| 2. Filter | Only Persuadables passed downstream | Uplift model (this engine) |
+| 3. Generate | Agent calls tools, writes personalized plan | Llama 3.3 / GPT-4o |
+| 4. Review | CSM reviews and approves | Salesforce inbox / HubSpot task |
+| 5. Execute | Message sent via selected channel | Marketo / Outreach / Intercom |
+| 6. Track | Open rate, reply, churn outcome logged | CRM analytics |
+| 7. Feedback | Outcomes retrain the uplift model quarterly | MLOps pipeline |
+
+**Agentic mode** (toggle in sidebar) implements the tool-calling pattern used by Einstein Copilot:
+the model decides *what data to retrieve* via function calls rather than getting everything pre-stuffed into one prompt.
+The **AI Customer Assistant** tab adds a conversational layer — CSMs can ask questions before deciding whether to act.
+        """)
+        return
+
+    # ── Tabs ─────────────────────────────────────────────────────────────────
+    tab1, tab2 = st.tabs(["📋 Batch Generator", "💬 AI Customer Assistant"])
+
+    with tab1:
+        _render_batch_tab(df, api_key, avg_clv, top_n, agentic_mode, playbook)
+
+    with tab2:
+        _render_chat_tab(df, api_key, playbook)
+
+
+# ─── Page 5: Audit & Analytics ──────────────────────────────────────────────
+def page_analytics():
+    import database as db
+
+    st.title("Audit & Analytics")
+    st.markdown(
+        "Full audit trail of every LLM-generated retention action, with outcome tracking. "
+        "CSMs mark results after executing interventions — this data closes the feedback loop "
+        "and would retrain the uplift model quarterly in a production system."
+    )
+
+    if not db.is_available():
+        st.warning("Database not connected — audit trail is not persisting yet.")
+        st.markdown("---")
+        st.markdown("### How to connect the database (3 steps)")
+        st.markdown("""
+**Step 1** — Create a free Supabase project at [supabase.com](https://supabase.com)
+
+**Step 2** — Copy the connection string:
+`Settings → Database → Connection string → URI mode`
+
+It looks like: `postgresql://postgres:[password]@db.[ref].supabase.co:5432/postgres`
+
+**Step 3** — Add to Streamlit Secrets (Settings → Secrets in your Streamlit Cloud app):
+```toml
+DATABASE_URL = "postgresql://postgres:..."
+GROQ_API_KEY = "gsk_..."
+```
+
+Tables are created automatically on first connection. No SQL needed.
+
+Once connected, every retention action generated on the Retention Actions page will be logged here,
+and CSMs can mark outcomes (Retained / Churned / Pending) directly on each action card.
+        """)
+        return
+
+    summary = db.get_audit_summary()
+    if not summary:
+        st.info("No retention actions have been generated yet. Go to Retention Actions and generate some plans first.")
+        return
+
+    # ── Summary metrics ──────────────────────────────────────────────────────
+    outcomes = summary.get("outcomes", {})
+    total = summary.get("total_actions", 0)
+    retained = outcomes.get("retained", 0)
+    churned = outcomes.get("churned", 0)
+    pending = outcomes.get("pending", 0) + (total - retained - churned - outcomes.get("pending", 0))
+
+    st.subheader("Campaign Summary")
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Total Actions Generated", f"{total:,}")
+    m2.metric("Marked Retained ✅", f"{retained:,}", f"{retained/total:.0%}" if total else "0%")
+    m3.metric("Marked Churned ❌", f"{churned:,}", f"{churned/total:.0%}" if total else "0%")
+    m4.metric("Pending Outcome ⏳", f"{total - retained - churned:,}")
 
     st.markdown("---")
 
-    # ── How this works in production ─────────────────────────────────────────
-    if not api_key:
-        st.info(
-            "Enter your free Groq API key in the sidebar to generate retention action plans. "
-            "Get one at **console.groq.com** — takes 2 minutes, no credit card required."
+    # ── Outcome by intervention type ─────────────────────────────────────────
+    by_type = summary.get("by_intervention_type", [])
+    by_seg = summary.get("by_segment", [])
+
+    if by_type:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Retention Rate by Intervention Type")
+            st.caption("Which intervention types are actually retaining customers?")
+            type_df = pd.DataFrame([
+                {
+                    "Intervention": r["intervention_type"] or "Unknown",
+                    "Total Actions": r["total"],
+                    "Retention Rate": f"{r['retention_rate']:.0%}" if r["retention_rate"] is not None else "No feedback yet",
+                }
+                for r in by_type
+            ])
+            st.dataframe(type_df.set_index("Intervention"), use_container_width=True)
+
+        with col2:
+            st.subheader("Retention Rate by Segment")
+            st.caption("Which segments respond best to AI-generated interventions?")
+            seg_df = pd.DataFrame([
+                {
+                    "Segment": r["segment"] or "Unknown",
+                    "Total Actions": r["total"],
+                    "Retention Rate": f"{r['retention_rate']:.0%}" if r["retention_rate"] is not None else "No feedback yet",
+                }
+                for r in by_seg
+            ])
+            st.dataframe(seg_df.set_index("Segment"), use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Full action log ──────────────────────────────────────────────────────
+    st.subheader("Full Action Log")
+    st.caption(
+        "Every retention action ever generated, with the latest outcome. "
+        "In production this would feed the quarterly model retraining pipeline."
+    )
+    all_actions = db.get_all_retention_actions(limit=200)
+    if all_actions:
+        log_df = pd.DataFrame(all_actions)
+        log_df["agentic_mode"] = log_df["agentic_mode"].map({True: "Agentic", False: "Standard"})
+        log_df["outcome"] = log_df["outcome"].fillna("pending")
+        log_df["churn_probability"] = log_df["churn_probability"].round(3)
+        st.dataframe(
+            log_df[["customer_id", "segment", "churn_probability", "intervention_type",
+                    "channel", "agentic_mode", "outcome", "generated_at"]].rename(columns={
+                "customer_id": "CustomerID", "segment": "Segment",
+                "churn_probability": "ChurnProb", "intervention_type": "Intervention",
+                "channel": "Channel", "agentic_mode": "Mode",
+                "outcome": "Outcome", "generated_at": "GeneratedAt",
+            }),
+            use_container_width=True,
+            height=400,
         )
-        st.markdown("---")
-        st.markdown("### How this works in production (Salesforce / HubSpot pattern)")
-        st.markdown(
-            """
-| Step | What happens | Tool used |
-|------|-------------|-----------|
-| 1. Score | Churn model scores all customers nightly | XGBoost (this engine) |
-| 2. Filter | Only Persuadables are passed downstream | Uplift model (this engine) |
-| 3. Generate | LLM writes a personalized intervention plan per customer | Llama 3.3 / GPT-4 |
-| 4. Review | A CSM (Customer Success Manager) reviews and approves | Salesforce inbox / HubSpot task |
-| 5. Execute | Approved message is sent via the selected channel | Marketo / Outreach / Intercom |
-| 6. Track | Open rate, reply rate, and churn outcome are logged | CRM analytics |
-| 7. Feedback | Logged outcomes retrain the uplift model quarterly | MLOps pipeline |
-
-This page implements Steps 1–3. Steps 4–7 would connect to a CRM via API in a production system.
-            """
-        )
-        return
-
-    # ── Generate Actions ─────────────────────────────────────────────────────
-    if st.button("Generate Retention Actions", type="primary"):
-        from retention_llm import generate_batch_retention_actions
-
-        seg_profiles = build_segment_profiles(df)
-
-        with st.spinner(
-            f"Generating {top_n} retention action plans via Llama 3.3 (Groq)..."
-        ):
-            actions = generate_batch_retention_actions(
-                df_uplift=persuadables,
-                segment_profiles=seg_profiles,
-                api_key=api_key,
-                top_n=top_n,
-                avg_clv=avg_clv,
-            )
-
-        st.success(f"Generated {len(actions)} retention action plans.")
-
-        # ── CSV Export (mirrors CRM handoff in production) ───────────────────
-        export_rows = []
-        for a in actions:
-            export_rows.append({
-                "CustomerID": a.get("customer_id"),
-                "Segment": a.get("segment"),
-                "ChurnProbability": a.get("churn_probability"),
-                "UpliftScore": a.get("uplift_score"),
-                "NetROI": a.get("net_roi"),
-                "InterventionType": a.get("intervention_type"),
-                "Channel": a.get("channel"),
-                "Timing": a.get("timing"),
-                "Cost": a.get("intervention_cost_estimate"),
-                "Confidence": a.get("confidence"),
-                "WhyAtRisk": a.get("primary_risk_reason"),
-                "WillRespond": a.get("customer_receptivity"),
-                "SuggestedMessage": a.get("message_framing"),
-                "ExpectedOutcome": a.get("expected_outcome"),
-            })
-        export_df = pd.DataFrame(export_rows)
-        st.download_button(
-            label="Export to CSV (CRM handoff)",
-            data=export_df.to_csv(index=False).encode("utf-8"),
-            file_name="retention_actions.csv",
-            mime="text/csv",
-            help="Download this file to import into Salesforce, HubSpot, or Marketo",
-        )
-
-        st.markdown("---")
-
-        for action in actions:
-            cid = action.get("customer_id", "N/A")
-            seg = action.get("segment", "N/A")
-            churn_p = action.get("churn_probability", 0)
-            uplift = action.get("uplift_score", 0)
-            roi = action.get("net_roi", 0)
-
-            with st.expander(
-                f"Customer {cid} | {seg} | Churn: {churn_p:.1%} | "
-                f"Uplift: {uplift:+.3f} | ROI: ${roi:.0f}",
-                expanded=True,
-            ):
-                if action.get("error"):
-                    st.error(f"Error: {action['error']}")
-                elif action.get("do_not_intervene_reason"):
-                    st.warning(
-                        f"No intervention recommended: {action['do_not_intervene_reason']}"
-                    )
-                else:
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("Intervention", action.get("intervention_type", "N/A"))
-                    col2.metric("Channel", action.get("channel", "N/A"))
-                    col3.metric("Timing", action.get("timing", "N/A"))
-
-                    col4, col5 = st.columns(2)
-                    col4.metric("Estimated Cost", action.get("intervention_cost_estimate", "N/A"))
-                    col5.metric("Model Confidence", action.get("confidence", "N/A"))
-
-                    st.markdown(f"**Why at risk:** {action.get('primary_risk_reason', '')}")
-                    st.markdown(f"**Will they respond?** {action.get('customer_receptivity', '')}")
-
-                    st.markdown("**Suggested Message** *(copy-paste ready for CSM)*")
-                    st.code(action.get("message_framing", ""), language=None)
-
-                    st.markdown(f"**Expected outcome:** {action.get('expected_outcome', '')}")
+        st.caption(f"Showing {len(log_df):,} most recent actions · sorted newest first")
+    else:
+        st.info("No logged actions yet.")
 
 
 # ─── Main App ────────────────────────────────────────────────────────────────
@@ -967,6 +1266,14 @@ def main():
         st.code("python src/pipeline.py")
         st.stop()
 
+    # Initialise DB (gracefully skips if DATABASE_URL not set)
+    import database as db
+    db.initialize()
+
+    # Generate a stable session ID for this browser session
+    if "session_id" not in st.session_state:
+        st.session_state["session_id"] = str(uuid.uuid4())
+
     df = load_data()
     page = render_sidebar(df)
 
@@ -978,6 +1285,8 @@ def main():
         page_uplift(df)
     elif page == "Retention Actions":
         page_retention_actions(df)
+    elif page == "Audit & Analytics":
+        page_analytics()
 
 
 if __name__ == "__main__":
