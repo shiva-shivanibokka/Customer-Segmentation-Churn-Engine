@@ -107,7 +107,7 @@ def build_segment_profiles(df):
 
 # ─── Sidebar ────────────────────────────────────────────────────────────────
 def render_sidebar(df):
-    st.sidebar.image("https://img.icons8.com/fluency/96/000000/target.png", width=60)
+    st.sidebar.markdown("## 📊")
     st.sidebar.title("Churn Engine")
     st.sidebar.caption("Decision Intelligence Platform")
     st.sidebar.markdown("---")
