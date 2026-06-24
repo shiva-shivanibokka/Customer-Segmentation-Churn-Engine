@@ -32,6 +32,7 @@ Dataset Note on Treatment Assignment:
   A/B test logs to train their uplift models.
 """
 
+import logging
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -41,13 +42,15 @@ import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 
+logger = logging.getLogger(__name__)
+
 try:
     from causalml.inference.meta import BaseSClassifier, BaseTClassifier
 
     CAUSALML_AVAILABLE = True
 except ImportError:
     CAUSALML_AVAILABLE = False
-    print("[uplift] CausalML not available — using custom T-Learner fallback.")
+    logger.warning("CausalML not available — using custom T-Learner fallback.")
 
 warnings.filterwarnings("ignore")
 
@@ -276,21 +279,18 @@ def run_uplift_pipeline(
     """
     Full uplift modeling pipeline.
     """
-    print("[uplift] Simulating treatment assignment from observational data...")
+    logger.info("Simulating treatment assignment from observational data...")
     df = df.copy()
     df["Treatment"] = simulate_treatment(df)
-    print(
-        f"[uplift] Treatment group: {df['Treatment'].sum()} | "
-        f"Control: {(df['Treatment'] == 0).sum()}"
-    )
+    logger.info("Treatment group: %d | Control: %d", df["Treatment"].sum(), (df["Treatment"] == 0).sum())
 
     if CAUSALML_AVAILABLE:
-        print("[uplift] Running CausalML T-Learner + S-Learner ensemble...")
+        logger.info("Running CausalML T-Learner + S-Learner ensemble...")
         uplift_scores, p_churn_control, metrics = compute_uplift_scores_causalml(
             df, feature_cols
         )
     else:
-        print("[uplift] Running custom T-Learner...")
+        logger.info("Running custom T-Learner...")
         uplift_scores, p_churn_control, metrics = compute_uplift_scores_custom(
             df, feature_cols
         )
@@ -298,9 +298,7 @@ def run_uplift_pipeline(
     df["UpliftScore"] = uplift_scores
     df["ChurnProbNoTreatment"] = p_churn_control
 
-    print(
-        "[uplift] Classifying customer types (Persuadable / Sure Thing / Lost Cause / Sleeping Dog)..."
-    )
+    logger.info("Classifying customer types (Persuadable / Sure Thing / Lost Cause / Sleeping Dog)...")
     df["CustomerType"] = df.apply(
         lambda row: classify_customer_type(
             row["UpliftScore"],
@@ -309,7 +307,7 @@ def run_uplift_pipeline(
         axis=1,
     )
 
-    print("[uplift] Computing intervention ROI...")
+    logger.info("Computing intervention ROI...")
     df = estimate_intervention_roi(
         df,
         avg_clv=avg_clv,
@@ -320,11 +318,9 @@ def run_uplift_pipeline(
     n_persuadable = customer_type_counts.get("Persuadable", 0)
     n_positive_roi = df["ROIPositive"].sum()
 
-    print(f"[uplift] Customer types: {customer_type_counts}")
-    print(
-        f"[uplift] Persuadables: {n_persuadable} | Positive ROI interventions: {n_positive_roi}"
-    )
-    print(f"[uplift] Uplift metrics: {metrics}")
+    logger.info("Customer types: %s", customer_type_counts)
+    logger.info("Persuadables: %d | Positive ROI interventions: %d", n_persuadable, n_positive_roi)
+    logger.info("Uplift metrics: %s", metrics)
 
     # Save
     df.to_parquet(os.path.join(PROCESSED_PATH, "uplift.parquet"), index=False)

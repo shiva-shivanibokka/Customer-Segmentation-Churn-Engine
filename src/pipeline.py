@@ -8,6 +8,7 @@ Run this once to build all models. The Streamlit app reads from cached
 .parquet and .pkl files — no retraining on app load.
 """
 
+import logging
 import os
 import sys
 import joblib
@@ -16,10 +17,13 @@ import pandas as pd
 # Add src directory to path for imports
 sys.path.insert(0, os.path.dirname(__file__))
 
+from logging_config import configure_logging
 from features import build_pipeline, get_feature_sets
 from segmentation import run_segmentation
 from churn_model import run_churn_pipeline
 from uplift_model import run_uplift_pipeline
+
+logger = logging.getLogger(__name__)
 
 PROCESSED_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
 MODELS_PATH = os.path.join(os.path.dirname(__file__), "..", "models")
@@ -43,13 +47,13 @@ def run_full_pipeline(force_retrain: bool = False) -> dict:
     segmented_path = os.path.join(PROCESSED_PATH, "segmented.parquet")
 
     if not force_retrain and os.path.exists(uplift_path):
-        print("[pipeline] Loading cached artifacts...")
+        logger.info("Loading cached artifacts...")
         df = pd.read_parquet(uplift_path)
         seg_profiles = joblib.load(seg_profiles_path)
         segment_models = joblib.load(seg_models_path)
         stability = joblib.load(stability_path)
         feature_sets = get_feature_sets()
-        print("[pipeline] Loaded from cache.")
+        logger.info("Loaded from cache.")
         return {
             "df": df,
             "seg_profiles": seg_profiles,
@@ -58,12 +62,12 @@ def run_full_pipeline(force_retrain: bool = False) -> dict:
             "feature_sets": feature_sets,
         }
 
-    print("\n" + "=" * 60)
-    print("CUSTOMER SEGMENTATION & CHURN ENGINE — FULL PIPELINE")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("CUSTOMER SEGMENTATION & CHURN ENGINE — FULL PIPELINE")
+    logger.info("=" * 60)
 
     # Stage 1: Feature Engineering
-    print("\n[Stage 1] Feature Engineering")
+    logger.info("[Stage 1] Feature Engineering")
     feature_sets = get_feature_sets()
     df = build_pipeline(save=True)
 
@@ -73,7 +77,7 @@ def run_full_pipeline(force_retrain: bool = False) -> dict:
         and os.path.exists(segmented_path)
         and os.path.exists(stability_path)
     ):
-        print("\n[Stage 2] Customer Segmentation — loading from cache")
+        logger.info("[Stage 2] Customer Segmentation — loading from cache")
         df = pd.read_parquet(segmented_path)
         stability = joblib.load(stability_path)
         seg_profiles = (
@@ -93,7 +97,7 @@ def run_full_pipeline(force_retrain: bool = False) -> dict:
         seg_profiles["CustomerCount"] = df.groupby("Segment").size()
         seg_profiles["ChurnRate"] = df.groupby("Segment")["Churn"].mean().round(3)
     else:
-        print("\n[Stage 2] Customer Segmentation")
+        logger.info("[Stage 2] Customer Segmentation")
         seg_results = run_segmentation(df, feature_sets["clustering"], n_clusters=5)
         df = seg_results["df"]
         stability = seg_results["stability"]
@@ -102,20 +106,20 @@ def run_full_pipeline(force_retrain: bool = False) -> dict:
         joblib.dump(stability, stability_path)
 
     # Stage 3: Per-Segment Churn Models
-    print("\n[Stage 3] Per-Segment Churn Prediction")
+    logger.info("[Stage 3] Per-Segment Churn Prediction")
     churn_results = run_churn_pipeline(df, feature_sets["churn_model"])
     df = churn_results["df"]
     segment_models = churn_results["segment_models"]
 
     # Stage 4: Uplift Modeling
-    print("\n[Stage 4] Uplift Modeling (Causal ML)")
+    logger.info("[Stage 4] Uplift Modeling (Causal ML)")
     uplift_results = run_uplift_pipeline(df, feature_sets["uplift_model"])
     df = uplift_results["df"]
 
     # Save final enriched dataset
     df.to_parquet(uplift_path, index=False)
-    print(f"\n[pipeline] Pipeline complete. Final dataset: {df.shape}")
-    print(f"[pipeline] Columns: {df.columns.tolist()}")
+    logger.info("Pipeline complete. Final dataset: %s", df.shape)
+    logger.info("Columns: %s", df.columns.tolist())
 
     return {
         "df": df,
@@ -129,6 +133,7 @@ def run_full_pipeline(force_retrain: bool = False) -> dict:
 if __name__ == "__main__":
     import argparse
 
+    configure_logging()
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="Force retrain all models")
     args = parser.parse_args()
@@ -136,22 +141,16 @@ if __name__ == "__main__":
     results = run_full_pipeline(force_retrain=args.force)
     df = results["df"]
 
-    print("\n" + "=" * 60)
-    print("PIPELINE SUMMARY")
-    print("=" * 60)
-    print(f"Total customers: {len(df)}")
-    print(f"\nSegment distribution:")
-    print(df["Segment"].value_counts())
-    print(f"\nCustomer type distribution (uplift):")
-    print(df["CustomerType"].value_counts())
-    print(f"\nRisk tier distribution:")
-    print(df["RiskTier"].value_counts())
-    print(
-        f"\nPersuadables with positive ROI: "
-        f"{((df['CustomerType'] == 'Persuadable') & (df['NetROI'] > 0)).sum()}"
+    logger.info("=" * 60)
+    logger.info("PIPELINE SUMMARY")
+    logger.info("=" * 60)
+    logger.info("Total customers: %d", len(df))
+    logger.info("Segment distribution:\n%s", df["Segment"].value_counts().to_string())
+    logger.info("Customer type distribution:\n%s", df["CustomerType"].value_counts().to_string())
+    logger.info("Risk tier distribution:\n%s", df["RiskTier"].value_counts().to_string())
+    logger.info(
+        "Persuadables with positive ROI: %d",
+        ((df["CustomerType"] == "Persuadable") & (df["NetROI"] > 0)).sum(),
     )
-
-    print("\nCluster stability:")
     stab = results["stability"]
-    print(f"  Mean ARI: {stab['mean_ari']:.3f} ± {stab['std_ari']:.3f}")
-    print(f"  Grade: {stab['grade']}")
+    logger.info("Cluster stability: Mean ARI=%.3f ± %.3f | Grade: %s", stab["mean_ari"], stab["std_ari"], stab["grade"])

@@ -10,11 +10,14 @@ All features are engineered from raw behavioral columns — no demographics used
 as primary signals, mirroring industry best practice for fairness and signal quality.
 """
 
+import logging
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 import joblib
 import os
+
+logger = logging.getLogger(__name__)
 
 RAW_PATH = os.path.join(
     os.path.dirname(__file__), "..", "data", "raw", "E Commerce Dataset.xlsx"
@@ -22,9 +25,63 @@ RAW_PATH = os.path.join(
 PROCESSED_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
 
 
+EXPECTED_COLUMNS = [
+    "CustomerID", "Churn", "Tenure", "PreferredLoginDevice", "CityTier",
+    "WarehouseToHome", "PreferredPaymentMode", "Gender", "HourSpendOnApp",
+    "NumberOfDeviceRegistered", "PreferedOrderCat", "SatisfactionScore",
+    "MaritalStatus", "NumberOfAddress", "Complain", "OrderAmountHikeFromlastYear",
+    "CouponUsed", "OrderCount", "DaySinceLastOrder", "CashbackAmount",
+]
+
+MAX_MISSING_RATE = 0.30
+
+
+def validate_schema(df: pd.DataFrame) -> None:
+    """
+    Validate the raw dataset schema before feature engineering.
+    Raises ValueError with a clear message if the data does not meet expectations.
+    This prevents silent failures deep in the pipeline from a renamed column or
+    wrong sheet.
+    """
+    missing_cols = [c for c in EXPECTED_COLUMNS if c not in df.columns]
+    if missing_cols:
+        raise ValueError(
+            f"Raw data is missing expected columns: {missing_cols}. "
+            f"Check that the correct sheet ('E Comm') was loaded."
+        )
+
+    high_missing = {
+        col: df[col].isna().mean()
+        for col in EXPECTED_COLUMNS
+        if df[col].isna().mean() > MAX_MISSING_RATE
+    }
+    if high_missing:
+        logger.warning(
+            "Columns with >%d%% missing values: %s",
+            int(MAX_MISSING_RATE * 100), high_missing,
+        )
+
+    if len(df) < 100:
+        raise ValueError(f"Dataset has only {len(df)} rows — expected at least 100.")
+
+    logger.info("Schema validation passed: %d rows, %d columns.", len(df), len(df.columns))
+
+
 def load_raw_data() -> pd.DataFrame:
     """Load the raw e-commerce dataset from xlsx."""
-    df = pd.read_excel(RAW_PATH, sheet_name="E Comm")
+    if not os.path.exists(RAW_PATH):
+        raise FileNotFoundError(
+            f"Raw data file not found at '{RAW_PATH}'. "
+            "Run: kaggle datasets download -d ankitverma2010/ecommerce-customer-churn-analysis-and-prediction "
+            "-p data/raw --unzip"
+        )
+    try:
+        df = pd.read_excel(RAW_PATH, sheet_name="E Comm")
+    except Exception as exc:
+        raise RuntimeError(
+            f"Failed to read '{RAW_PATH}'. Ensure the file is a valid xlsx with sheet 'E Comm'."
+        ) from exc
+    validate_schema(df)
     return df
 
 
@@ -209,25 +266,25 @@ def build_pipeline(save: bool = True) -> pd.DataFrame:
     Full feature engineering pipeline. Returns processed DataFrame.
     If save=True, writes processed data to disk (mirrors offline feature store materialization).
     """
-    print("[features] Loading raw data...")
+    logger.info("Loading raw data...")
     df = load_raw_data()
 
-    print("[features] Imputing missing values...")
+    logger.info("Imputing missing values...")
     df = impute_missing(df)
 
-    print("[features] Encoding categoricals...")
+    logger.info("Encoding categoricals...")
     df = encode_categoricals(df)
 
-    print("[features] Engineering behavioral features...")
+    logger.info("Engineering behavioral features...")
     df = engineer_features(df)
 
     if save:
         os.makedirs(PROCESSED_PATH, exist_ok=True)
         out_path = os.path.join(PROCESSED_PATH, "features.parquet")
         df.to_parquet(out_path, index=False)
-        print(f"[features] Saved processed features to {out_path}")
+        logger.info("Saved processed features to %s", out_path)
 
-    print(f"[features] Pipeline complete. Shape: {df.shape}")
+    logger.info("Pipeline complete. Shape: %s", df.shape)
     return df
 
 

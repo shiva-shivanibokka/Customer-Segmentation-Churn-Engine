@@ -21,9 +21,16 @@ the customer profile before generating the recommendation.
 """
 
 import json
+import logging
 import os
+import time
 import anthropic
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+_MAX_RETRIES = 3
+_RETRY_DELAY_S = 2.0
 
 
 def build_retention_prompt(
@@ -154,42 +161,48 @@ def generate_retention_action(
     """
     client = anthropic.Anthropic(api_key=api_key)
     prompt = build_retention_prompt(customer_row, segment_profile, top_shap, avg_clv)
+    customer_id = customer_row.get("CustomerID", "N/A")
+    raw_text = "No response"
 
-    try:
-        response = client.messages.create(
-            model=model,
-            max_tokens=600,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw_text = response.content[0].text.strip()
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            response = client.messages.create(
+                model=model,
+                max_tokens=600,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw_text = response.content[0].text.strip()
 
-        # Parse JSON response
-        # Find JSON block if wrapped in markdown
-        if "```json" in raw_text:
-            raw_text = raw_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in raw_text:
-            raw_text = raw_text.split("```")[1].split("```")[0].strip()
+            # Strip markdown code fences if present
+            if "```json" in raw_text:
+                raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in raw_text:
+                raw_text = raw_text.split("```")[1].split("```")[0].strip()
 
-        action = json.loads(raw_text)
-        action["customer_id"] = customer_row.get("CustomerID", "N/A")
-        action["segment"] = customer_row.get("Segment", "Unknown")
-        action["churn_probability"] = customer_row.get("ChurnProbability", 0)
-        action["uplift_score"] = customer_row.get("UpliftScore", 0)
-        action["net_roi"] = customer_row.get("NetROI", 0)
-        action["error"] = None
-        return action
+            action = json.loads(raw_text)
+            action["customer_id"] = customer_id
+            action["segment"] = customer_row.get("Segment", "Unknown")
+            action["churn_probability"] = customer_row.get("ChurnProbability", 0)
+            action["uplift_score"] = customer_row.get("UpliftScore", 0)
+            action["net_roi"] = customer_row.get("NetROI", 0)
+            action["error"] = None
+            return action
 
-    except json.JSONDecodeError as e:
-        return {
-            "customer_id": customer_row.get("CustomerID", "N/A"),
-            "error": f"JSON parse error: {str(e)}",
-            "raw_response": raw_text if "raw_text" in locals() else "No response",
-        }
-    except Exception as e:
-        return {
-            "customer_id": customer_row.get("CustomerID", "N/A"),
-            "error": str(e),
-        }
+        except json.JSONDecodeError as e:
+            logger.warning("JSON parse error (attempt %d/%d) for customer %s: %s", attempt, _MAX_RETRIES, customer_id, e)
+            if attempt == _MAX_RETRIES:
+                logger.error("All retries exhausted for customer %s.", customer_id)
+                return {"customer_id": customer_id, "error": f"JSON parse error: {e}", "raw_response": raw_text}
+
+        except anthropic.RateLimitError:
+            logger.warning("Rate limited (attempt %d/%d) — backing off %.1fs...", attempt, _MAX_RETRIES, _RETRY_DELAY_S * attempt)
+            time.sleep(_RETRY_DELAY_S * attempt)
+
+        except Exception as e:
+            logger.error("Retention action generation failed for customer %s: %s", customer_id, e)
+            return {"customer_id": customer_id, "error": str(e)}
+
+    return {"customer_id": customer_id, "error": "Max retries exceeded."}
 
 
 def generate_batch_retention_actions(
@@ -238,10 +251,10 @@ def generate_batch_retention_actions(
         except Exception:
             top_shap = {}
 
-        print(
-            f"  [llm] Generating action {i + 1}/{min(top_n, len(filtered))} "
-            f"for customer {row.get('CustomerID', idx)} "
-            f"(segment: {segment}, churn: {row.get('ChurnProbability', 0):.1%})..."
+        logger.info(
+            "Generating action %d/%d for customer %s (segment: %s, churn: %.1f%%)...",
+            i + 1, min(top_n, len(filtered)), row.get("CustomerID", idx), segment,
+            row.get("ChurnProbability", 0) * 100,
         )
 
         action = generate_retention_action(

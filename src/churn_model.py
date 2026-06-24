@@ -36,10 +36,10 @@ Explainability approach:
   Full TreeExplainer can be re-enabled once XGBoost stabilises the API.
 """
 
+import logging
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-import shap
 import mlflow
 import mlflow.xgboost
 import joblib
@@ -56,6 +56,8 @@ from sklearn.metrics import (
 )
 
 warnings.filterwarnings("ignore")
+
+logger = logging.getLogger(__name__)
 
 MODELS_PATH = os.path.join(os.path.dirname(__file__), "..", "models")
 PROCESSED_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
@@ -116,9 +118,7 @@ def train_segment_model(
 
     # Skip segments with too few samples or only one class
     if len(y_all) < 50 or y_all.nunique() < 2:
-        print(
-            f"  [churn] Skipping segment '{segment_name}': insufficient data ({len(y_all)} rows)"
-        )
+        logger.warning("Skipping segment '%s': insufficient data (%d rows)", segment_name, len(y_all))
         return None
 
     # ── Stratified 80/20 holdout split ──────────────────────────────────────
@@ -186,10 +186,6 @@ def train_segment_model(
     if max_val > 0:
         mean_abs_shap = mean_abs_shap / max_val
 
-    # Store minimal explainer info — no heavy PermutationExplainer
-    explainer = None
-    shap_interaction = {}
-
     metrics = {
         "segment": segment_name,
         # Train split size (80% of segment)
@@ -247,18 +243,15 @@ def train_segment_model(
 
             mlflow.xgboost.log_model(base_clf, name=f"model_{segment_name}")
 
-    print(
-        f"  [churn] Segment '{segment_name}': "
-        f"CV AUC={cv_auc:.3f} | Holdout AUC={holdout_auc:.3f} | "
-        f"Holdout Brier={holdout_brier:.3f} | "
-        f"n_train={len(y)}, n_test={len(y_test)}, churn_rate={y.mean():.2%}"
+    logger.info(
+        "Segment '%s': CV AUC=%.3f | Holdout AUC=%.3f | Holdout Brier=%.3f | "
+        "n_train=%d, n_test=%d, churn_rate=%.2%%",
+        segment_name, cv_auc, holdout_auc, holdout_brier, len(y), len(y_test), y.mean() * 100,
     )
 
     return {
         "base_clf": base_clf,
         "calibrated_clf": calibrated_clf,
-        "explainer": explainer,  # None — gain-based importance used instead
-        "shap_interaction": shap_interaction,
         "mean_abs_shap": mean_abs_shap,
         "metrics": metrics,
         "feature_cols": feature_cols,
@@ -413,7 +406,7 @@ def run_churn_pipeline(
     all_metrics = []
 
     segments = df["Segment"].unique()
-    print(f"[churn] Training per-segment models for {len(segments)} segments...")
+    logger.info("Training per-segment models for %d segments...", len(segments))
 
     with mlflow.start_run(run_name="PerSegmentChurnPipeline"):
         mlflow.log_param("n_segments", len(segments))
@@ -446,28 +439,23 @@ def run_churn_pipeline(
             mlflow.log_metric("avg_holdout_auc_across_segments", avg_holdout_auc)
             mlflow.log_metric("avg_holdout_brier_across_segments", avg_holdout_brier)
             mlflow.log_metric("avg_train_brier_across_segments", avg_train_brier)
-            print(
-                f"[churn] Aggregate: "
-                f"CV AUC={avg_cv_auc:.3f} | "
-                f"Holdout AUC={avg_holdout_auc:.3f} | "
-                f"Holdout Brier={avg_holdout_brier:.3f}"
+            logger.info(
+                "Aggregate: CV AUC=%.3f | Holdout AUC=%.3f | Holdout Brier=%.3f",
+                avg_cv_auc, avg_holdout_auc, avg_holdout_brier,
             )
 
     # Score all customers
-    print("[churn] Scoring all customers with calibrated probabilities...")
+    logger.info("Scoring all customers with calibrated probabilities...")
     df_scored = score_customers(df, segment_models, feature_cols)
 
     # Per-customer SHAP (top features)
-    print("[churn] Computing per-customer SHAP explanations...")
+    logger.info("Computing per-customer SHAP explanations...")
     df_scored = compute_per_customer_shap(df_scored, segment_models, feature_cols)
 
     # Save artifacts
     joblib.dump(segment_models, os.path.join(MODELS_PATH, "segment_models.pkl"))
     df_scored.to_parquet(os.path.join(PROCESSED_PATH, "scored.parquet"), index=False)
-    print(
-        f"[churn] Saved scored data. High-risk customers: "
-        f"{(df_scored['RiskTier'] == 'High Risk').sum()}"
-    )
+    logger.info("Saved scored data. High-risk customers: %d", (df_scored["RiskTier"] == "High Risk").sum())
 
     return {
         "df": df_scored,

@@ -15,6 +15,7 @@ segments are named with business-readable labels and profiled as heatmaps
 so non-technical stakeholders can act on them.
 """
 
+import logging
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
@@ -31,6 +32,8 @@ import os
 import warnings
 
 warnings.filterwarnings("ignore")
+
+logger = logging.getLogger(__name__)
 
 MODELS_PATH = os.path.join(os.path.dirname(__file__), "..", "models")
 PROCESSED_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
@@ -298,31 +301,27 @@ def run_segmentation(df: pd.DataFrame, feature_cols: list, n_clusters: int = 5) 
     """
     Full segmentation pipeline. Returns all artifacts needed for the Streamlit UI.
     """
-    print(
-        f"[segmentation] Scaling {len(feature_cols)} features for {len(df)} customers..."
-    )
+    logger.info("Scaling %d features for %d customers...", len(feature_cols), len(df))
     X = df[feature_cols].values
     X_scaled, scaler = scale_features(df[feature_cols])
 
-    print("[segmentation] Finding optimal k...")
+    logger.info("Finding optimal k...")
     k_metrics = find_optimal_k(X_scaled)
 
-    print(f"[segmentation] Fitting K-Means++ with k={n_clusters}...")
+    logger.info("Fitting K-Means++ with k=%d...", n_clusters)
     km, km_labels = fit_kmeans(X_scaled, n_clusters)
 
-    print(f"[segmentation] Fitting GMM with {n_clusters} components...")
+    logger.info("Fitting GMM with %d components...", n_clusters)
     gmm, gmm_labels, gmm_probs = fit_gmm(X_scaled, n_clusters)
 
-    print("[segmentation] Running bootstrap stability analysis (100 iterations)...")
+    logger.info("Running bootstrap stability analysis (100 iterations)...")
     stability = bootstrap_stability(X_scaled, n_clusters=n_clusters, n_bootstrap=100)
-    print(
-        f"[segmentation] Stability: mean ARI={stability['mean_ari']:.3f} ({stability['grade']})"
-    )
+    logger.info("Stability: mean ARI=%.3f (%s)", stability["mean_ari"], stability["grade"])
 
-    print("[segmentation] Fitting UMAP for visualization...")
+    logger.info("Fitting UMAP for visualization...")
     umap_embedding = fit_umap(X_scaled)
 
-    print("[segmentation] Labeling segments...")
+    logger.info("Labeling segments...")
     df_out, label_map = label_segments(km_labels, df, feature_cols)
 
     # Add GMM soft probabilities per segment
@@ -345,7 +344,7 @@ def run_segmentation(df: pd.DataFrame, feature_cols: list, n_clusters: int = 5) 
     out_path = os.path.join(PROCESSED_PATH, "segmented.parquet")
     df_out.to_parquet(out_path, index=False)
 
-    print(f"[segmentation] Done. Saved segmented data to {out_path}")
+    logger.info("Done. Saved segmented data to %s", out_path)
 
     return {
         "df": df_out,

@@ -2,6 +2,10 @@ __pycache__/
 *.pyc
 *.pyo
 .env
-*.env
 src/__pycache__/
 mlruns/
+.pytest_cache/
+
+# data/processed/ and models/ are intentionally tracked so Streamlit Cloud
+# can serve the pre-built models without re-running the pipeline.
+
