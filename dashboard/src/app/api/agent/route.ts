@@ -354,7 +354,7 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
     if (args.segment) {
       const { data } = await supabase.rpc("get_churn_kpis", { p_segment: String(args.segment) });
       if (!data) return { error: `No data for segment: ${args.segment}` };
-      const k = data as { total: number; avg_churn_prob: number };
+      const k = (Array.isArray(data) ? data[0] : data) as { total: number; avg_churn_prob: number };
       const expected = Math.round(k.total * k.avg_churn_prob);
       return {
         segment: args.segment,
@@ -402,6 +402,7 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
         channel: String(args.channel),
         timing: String(args.timing),
         message_framing: String(args.message_framing),
+        confidence: args.confidence != null ? String(args.confidence) : null,
         agent_reasoning: null,
         agentic_mode: true,
       })
@@ -657,6 +658,7 @@ export async function POST(req: NextRequest) {
               channel: action.channel ?? null,
               timing: action.timing ?? null,
               message_framing: action.message_framing ?? null,
+              confidence: action.confidence ?? null,
               agent_reasoning: trace,
               agentic_mode: true,
             })

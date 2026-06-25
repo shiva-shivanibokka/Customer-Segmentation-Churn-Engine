@@ -12,14 +12,6 @@ export function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function SubHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="text-[12px] font-bold text-[#4F46E5] uppercase tracking-[0.09em] bg-[#EEF2FF] px-3 py-1.5 rounded-r-lg border-l-4 border-[#4F46E5] mb-3">
-      {children}
-    </h3>
-  );
-}
-
 export function PageTitle({ children }: { children: React.ReactNode }) {
   return (
     <h1 className="text-[28px] font-extrabold text-[#1E1B4B] tracking-tight pb-3 mb-5 border-b-4 border-[#4F46E5]">
