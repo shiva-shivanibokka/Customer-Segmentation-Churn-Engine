@@ -389,9 +389,10 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
       .select("segment, churn_probability, uplift_score, net_roi")
       .eq("customer_id", customer_id)
       .single();
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("retention_actions")
       .insert({
+        id: crypto.randomUUID(),
         customer_id,
         segment: (customer as Record<string, unknown> | null)?.segment ?? null,
         churn_probability: (customer as Record<string, unknown> | null)?.churn_probability ?? null,
@@ -646,6 +647,7 @@ export async function POST(req: NextRequest) {
           const { data: saved, error: saveErr } = await supabaseAdmin
             .from("retention_actions")
             .insert({
+              id: crypto.randomUUID(),
               customer_id: String(customer.customer_id),
               segment: customer.segment ?? null,
               churn_probability: customer.churn_probability ?? null,
