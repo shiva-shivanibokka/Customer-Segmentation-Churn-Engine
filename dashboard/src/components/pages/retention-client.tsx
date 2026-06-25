@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PersuadableCustomer, saveRetentionAction } from "@/lib/data";
+import { PersuadableCustomer } from "@/lib/data";
 import { PageTitle, SectionHeading } from "@/components/ui/section-heading";
 import { MetricCard } from "@/components/ui/metric-card";
 
@@ -358,13 +358,6 @@ export function RetentionClient({ persuadables }: Props) {
       const data = await res.json();
       const plan = data.action ?? { error: data.error };
       setAction(plan);
-
-      // Persist every successful plan to retention_actions so it appears in Audit & Analytics
-      if (!plan.error && !plan.do_not_intervene_reason) {
-        saveRetentionAction(selected, plan as Record<string, unknown>, data.trace ?? []).catch(() => {
-          // non-fatal — plan is still shown to the user
-        });
-      }
     } catch (e) {
       setAction({ customer_id: selectedId, segment: "", churn_probability: 0, uplift_score: 0, net_roi: 0, error: String(e) });
     }

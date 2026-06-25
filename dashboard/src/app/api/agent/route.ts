@@ -4,9 +4,18 @@ import type { ChatCompletionMessageParam, ChatCompletionTool } from "groq-sdk/re
 import { createClient } from "@supabase/supabase-js";
 
 const groq = new GroqClient({ apiKey: process.env.GROQ_API_KEY || "" });
+
+// Read client — anon key, respects RLS
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+);
+
+// Write client — service role key bypasses RLS for server-side inserts.
+// Falls back to anon key if service role key is not configured.
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
 );
 
 const MODEL = "llama-3.3-70b-versatile";
@@ -630,7 +639,32 @@ export async function POST(req: NextRequest) {
         action.uplift_score = customer?.uplift_score;
         action.net_roi = customer?.net_roi;
         action.trace = trace;
-        return NextResponse.json({ action });
+
+        // Save to retention_actions server-side (uses service role key to bypass RLS)
+        let savedId: string | null = null;
+        if (!action.do_not_intervene_reason && customer) {
+          const { data: saved, error: saveErr } = await supabaseAdmin
+            .from("retention_actions")
+            .insert({
+              customer_id: String(customer.customer_id),
+              segment: customer.segment ?? null,
+              churn_probability: customer.churn_probability ?? null,
+              uplift_score: customer.uplift_score ?? null,
+              net_roi: customer.net_roi ?? null,
+              intervention_type: action.intervention_type ?? null,
+              channel: action.channel ?? null,
+              timing: action.timing ?? null,
+              message_framing: action.message_framing ?? null,
+              agent_reasoning: trace,
+              agentic_mode: true,
+            })
+            .select("id")
+            .single();
+          if (saveErr) console.error("retention_actions insert failed:", saveErr.message);
+          else savedId = (saved as { id: string } | null)?.id ?? null;
+        }
+
+        return NextResponse.json({ action, saved_id: savedId });
       } catch {
         return NextResponse.json({ action: { error: "Could not parse agent response", raw: raw.slice(0, 400), trace } });
       }
