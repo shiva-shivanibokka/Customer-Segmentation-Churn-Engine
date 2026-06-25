@@ -2,7 +2,7 @@
 
 > End-to-end decision intelligence platform: behavioral segmentation → per-cohort churn prediction → uplift modeling → 12-tool AI retention agent → closed-loop outcome tracking.
 
-![CI](https://github.com/shiva-shivanibokka/Customer-Segmentation-Churn-Engine/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/shiva-shivanibokka/Churn-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Docker](https://img.shields.io/badge/docker-build-passing)
 
@@ -203,8 +203,8 @@ flowchart TD
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/shiva-shivanibokka/Customer-Segmentation-Churn-Engine.git
-cd Customer-Segmentation-Churn-Engine
+git clone https://github.com/shiva-shivanibokka/Churn-Intelligence-Platform.git
+cd Churn-Intelligence-Platform
 
 cp .env.example .env
 # Edit .env — see Environment Variables section below
@@ -363,7 +363,7 @@ curl -X POST http://localhost:8000/score \
 ## Project Structure
 
 ```
-Customer-Segmentation-Churn-Engine/
+Churn-Intelligence-Platform/
 ├── src/
 │   ├── pipeline.py           # Orchestrator — runs all 4 stages, smart artifact caching
 │   ├── features.py           # E-commerce feature engineering + schema validation
