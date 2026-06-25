@@ -38,13 +38,16 @@ export function ChurnClient({ kpisAll, histAll, shapAll, riskSummary, avgChurnBy
 
   const shapData = active.shap.map((f) => ({ feature: f.feature, importance: f.avg_importance }));
 
-  const tierBySeg = riskSummary.map((r, i) => ({
-    segment: r.segment,
-    "High Risk": r.high_risk,
-    "Medium Risk": r.medium_risk,
-    "Low Risk": r.low_risk,
-    color: SEGMENT_COLORS[i % SEGMENT_COLORS.length],
-  }));
+  const tierBySeg = riskSummary.map((r, i) => {
+    const total = r.high_risk + r.medium_risk + r.low_risk || 1;
+    return {
+      segment: r.segment,
+      "High Risk":   Math.round((r.high_risk   / total) * 100),
+      "Medium Risk": Math.round((r.medium_risk / total) * 100),
+      "Low Risk":    Math.round((r.low_risk    / total) * 100),
+      color: SEGMENT_COLORS[i % SEGMENT_COLORS.length],
+    };
+  });
 
   const histColors = Array.from({ length: 10 }, (_, i) =>
     i >= 7 ? "#F43F5E" : i >= 4 ? "#F59E0B" : "#10B981"
@@ -55,7 +58,7 @@ export function ChurnClient({ kpisAll, histAll, shapAll, riskSummary, avgChurnBy
       <PageTitle>Churn Risk Dashboard</PageTitle>
 
       <div className="bg-[#FFF1F2] border-l-4 border-[#F43F5E] rounded-r-xl px-4 py-3 mb-6 text-[14px] text-[#7F1D1D]">
-        <strong>What this page shows:</strong> The XGBoost churn model scored every customer with a probability of churning (0–100%). This page breaks that down by segment, risk tier, and the specific features (SHAP values) driving each score. Use the <strong>segment filter below</strong> to zoom into one group — all four charts update together.
+        <strong>What this page shows:</strong> A per-segment CatBoost classifier (one model per segment, calibrated with isotonic regression) scored every customer with a probability of churning (0–100%). This page breaks that down by segment, risk tier, and the SHAP-approximated features driving each score. Use the <strong>segment filter below</strong> to zoom into one group — all charts update together.
       </div>
 
       {/* Segment filter chips */}
@@ -120,15 +123,15 @@ export function ChurnClient({ kpisAll, histAll, shapAll, riskSummary, avgChurnBy
       {/* Risk tier by segment */}
       <SectionHeading>Risk Tier Breakdown by Segment</SectionHeading>
       <div className="bg-[#FFF1F2] border border-[#FECDD3] rounded-xl px-4 py-2.5 mb-3 text-[13px] text-[#9F1239]">
-        Absolute count of High / Medium / Low risk customers per segment. Always shows all segments for comparison — not affected by the segment filter above.
+        Percentage of High / Medium / Low risk customers per segment. Shown as % so all segments are comparable regardless of size. Always shows all segments — not affected by the filter above.
       </div>
       <ChartCard>
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={tierBySeg} margin={{ top: 10, right: 20, left: 0, bottom: 30 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#FFE4E6" />
             <XAxis dataKey="segment" tick={{ fontSize: 12, fill: "#1E1B4B" }} />
-            <YAxis tick={{ fontSize: 12, fill: "#6B7280" }} />
-            <Tooltip contentStyle={{ borderRadius: "10px", border: "2px solid #FECDD3", fontSize: 13 }} />
+            <YAxis tick={{ fontSize: 12, fill: "#6B7280" }} tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
+            <Tooltip contentStyle={{ borderRadius: "10px", border: "2px solid #FECDD3", fontSize: 13 }} formatter={(v) => [`${v}%`]} />
             <Legend wrapperStyle={{ fontSize: 13, paddingTop: 12 }} />
             <Bar dataKey="High Risk"   stackId="a" fill={TIER_COLORS["High Risk"]} />
             <Bar dataKey="Medium Risk" stackId="a" fill={TIER_COLORS["Medium Risk"]} />
@@ -190,7 +193,7 @@ export function ChurnClient({ kpisAll, histAll, shapAll, riskSummary, avgChurnBy
         <p className="text-[12px] font-bold uppercase tracking-wide text-[#64748B] mb-3">Parameter Glossary</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px]">
           {[
-            ["Churn Probability", "The XGBoost model's predicted probability (0–100%) that a customer will leave."],
+            ["Churn Probability", "The per-segment CatBoost model's predicted probability (0–100%) that a customer will leave. Probabilities are calibrated with isotonic regression for reliable business calculations."],
             ["Risk Tier", "Bucketed into: Low Risk (0–30%), Medium Risk (30–60%), High Risk (60–100%)."],
             ["SHAP Value", "How much each feature pushes the churn probability up or down. Positive = increases churn risk."],
             ["Segment Filter", "Updates the probability histogram and SHAP chart to show only that segment."],

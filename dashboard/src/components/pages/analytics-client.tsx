@@ -66,6 +66,10 @@ export function AnalyticsClient({ actions: initialActions }: Props) {
     <div>
       <PageTitle>Audit & Analytics</PageTitle>
 
+      <div className="bg-[#EEF2FF] border-l-4 border-[#6366F1] rounded-r-xl px-4 py-2.5 mb-6 text-[13px] text-[#1E1B4B]">
+        All numbers below are computed live from your <strong>retention_actions</strong> and <strong>intervention_feedback</strong> tables in Supabase. Clicking ✓ Retained or ✗ Churned in the action log updates every card and table instantly — no page reload needed.
+      </div>
+
       {/* Campaign Summary */}
       <SectionHeading>Campaign Summary</SectionHeading>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

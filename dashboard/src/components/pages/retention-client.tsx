@@ -53,8 +53,8 @@ function renderToolResult(tool: string, result: Record<string, unknown>) {
         </p>
         {factors.map((f) => (
           <div key={f.feature} className="flex items-center gap-2">
-            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${f.effect.includes("increases") ? "bg-[#FEE2E2] text-[#991B1B]" : "bg-[#D1FAE5] text-[#065F46]"}`}>
-              {f.effect.includes("increases") ? "▲" : "▼"}
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${f.effect.includes("increases") ? "bg-[#FEE2E2] text-[#991B1B]" : "bg-[#D1FAE5] text-[#065F46]"}`}>
+              {f.effect.includes("increases") ? "+RISK" : "−RISK"}
             </span>
             <span className="text-[12px] font-semibold text-[#1E1B4B] w-52 shrink-0">{f.feature}</span>
             <span className="text-[11px] text-[#6B7280]">SHAP {f.shap_value.toFixed(4)} · {f.magnitude}</span>
@@ -129,33 +129,45 @@ function renderToolResult(tool: string, result: Record<string, unknown>) {
   return <pre className="text-[11px] text-[#6B7280] whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>;
 }
 
-function AgentTrace({ trace }: { trace: TraceStep[] }) {
+function AgentTrace({ trace, defaultOpen = false }: { trace: TraceStep[]; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   if (!trace || trace.length === 0) return null;
   return (
-    <div className="mt-4 border-t border-[#EDE9FE] pt-4">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-[#7C3AED] mb-3">
-        Agent Reasoning — {trace.length} tool call{trace.length !== 1 ? "s" : ""}
-      </p>
-      <div className="relative pl-6">
-        <div className="absolute left-2.5 top-0 bottom-0 w-px bg-[#DDD6FE]" />
-        {trace.map((step, si) => {
-          const meta = TOOL_META[step.tool] ?? { label: step.tool, color: "#6B7280" };
-          return (
-            <div key={si} className="relative mb-4">
-              <span
-                className="absolute -left-6 top-0 w-5 h-5 rounded-full text-white text-[9px] font-bold flex items-center justify-center shrink-0"
-                style={{ background: meta.color }}
-              >
-                {step.round}
-              </span>
-              <div className="bg-white border border-[#EDE9FE] rounded-xl px-4 py-3 shadow-sm">
-                <p className="text-[12px] font-bold mb-2" style={{ color: meta.color }}>{meta.label}</p>
-                {renderToolResult(step.tool, step.result)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <div className="border border-[#DDD6FE] rounded-xl overflow-hidden mb-3">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F5F3FF] hover:bg-[#EDE9FE] transition-colors text-left"
+      >
+        <span className="text-[#7C3AED] text-[11px]">{open ? "▼" : "▶"}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide text-[#7C3AED]">
+          Agent Reasoning — {trace.length} tool call{trace.length !== 1 ? "s" : ""}
+        </span>
+        <span className="ml-auto text-[10px] text-[#A78BFA]">{open ? "collapse" : "expand"}</span>
+      </button>
+      {open && (
+        <div className="px-4 pt-3 pb-4 bg-white">
+          <div className="relative pl-6">
+            <div className="absolute left-2.5 top-0 bottom-0 w-px bg-[#DDD6FE]" />
+            {trace.map((step, si) => {
+              const meta = TOOL_META[step.tool] ?? { label: step.tool, color: "#6B7280" };
+              return (
+                <div key={si} className="relative mb-4 last:mb-0">
+                  <span
+                    className="absolute -left-6 top-0 w-5 h-5 rounded-full text-white text-[9px] font-bold flex items-center justify-center shrink-0"
+                    style={{ background: meta.color }}
+                  >
+                    {step.round}
+                  </span>
+                  <div className="bg-[#FAFAFA] border border-[#EDE9FE] rounded-xl px-4 py-3">
+                    <p className="text-[12px] font-bold mb-2" style={{ color: meta.color }}>{meta.label}</p>
+                    {renderToolResult(step.tool, step.result)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -285,6 +297,11 @@ export function RetentionClient({ persuadables }: Props) {
           {action && !action.error && !action.do_not_intervene_reason && (
             <div>
               <SectionHeading>AI-Generated Retention Plan</SectionHeading>
+              {action.trace && action.trace.length > 0 && (
+                <div className="mb-4">
+                  <AgentTrace trace={action.trace} defaultOpen />
+                </div>
+              )}
               <div className="bg-white rounded-2xl border-2 border-[#DDD6FE] p-6 shadow-sm space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="text-[15px] font-bold text-[#1E1B4B]">{action.intervention_type}</span>
@@ -314,9 +331,6 @@ export function RetentionClient({ persuadables }: Props) {
                     <p>{action.expected_outcome}</p>
                   </div>
                 </div>
-                {action.trace && (action.trace as unknown[]).length > 0 && (
-                  <AgentTrace trace={action.trace as TraceStep[]} />
-                )}
               </div>
             </div>
           )}
@@ -362,8 +376,8 @@ export function RetentionClient({ persuadables }: Props) {
                 <p className="text-[11px] font-bold uppercase tracking-wide text-[#7C3AED] mb-1">
                   {m.role === "user" ? "You" : "AI Assistant"}
                 </p>
-                <p className="text-[#1E1B4B] whitespace-pre-wrap leading-relaxed">{m.content}</p>
                 {m.role === "assistant" && m.trace && <AgentTrace trace={m.trace} />}
+                <p className="text-[#1E1B4B] whitespace-pre-wrap leading-relaxed">{m.content}</p>
               </div>
             ))}
             {chatLoading && (

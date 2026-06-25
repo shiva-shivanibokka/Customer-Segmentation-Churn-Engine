@@ -132,12 +132,15 @@ export function SegmentationClient({ summary, umap }: Props) {
   }, [colorBy, umap]);
 
   const gmmData = useMemo(() =>
-    summary.map((s) => ({
-      segment: s.segment,
-      "High ≥90%":     s.gmm_high,
-      "Medium 80–90%": s.gmm_medium,
-      "Boundary <80%": s.gmm_boundary,
-    })), [summary]);
+    summary.map((s) => {
+      const total = (s.gmm_high + s.gmm_medium + s.gmm_boundary) || 1;
+      return {
+        segment: s.segment,
+        "High ≥90%":     Math.round((s.gmm_high     / total) * 100),
+        "Medium 80–90%": Math.round((s.gmm_medium   / total) * 100),
+        "Boundary <80%": Math.round((s.gmm_boundary / total) * 100),
+      };
+    }), [summary]);
 
   const heatmapData = useMemo(() => {
     const labels = ["Tenure", "Satisfaction", "Days Since Order", "App Hours", "Cashback"];
@@ -268,8 +271,8 @@ export function SegmentationClient({ summary, umap }: Props) {
           <BarChart data={gmmData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E0E7FF" />
             <XAxis dataKey="segment" tick={{ fontSize: 12, fill: "#6B7280" }} />
-            <YAxis tick={{ fontSize: 12, fill: "#6B7280" }} />
-            <Tooltip contentStyle={{ borderRadius: "10px", border: "2px solid #DDD6FE", fontSize: 13 }} />
+            <YAxis tick={{ fontSize: 12, fill: "#6B7280" }} tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
+            <Tooltip contentStyle={{ borderRadius: "10px", border: "2px solid #DDD6FE", fontSize: 13 }} formatter={(v) => [`${v}%`]} />
             <Legend wrapperStyle={{ fontSize: 13, paddingTop: 12 }} />
             <Bar dataKey="High ≥90%"     stackId="a" fill="#6366F1" />
             <Bar dataKey="Medium 80–90%" stackId="a" fill="#F59E0B" />
@@ -283,7 +286,7 @@ export function SegmentationClient({ summary, umap }: Props) {
       {/* Summary table */}
       <SectionHeading>Segment Summary Table</SectionHeading>
       <div className="bg-[#F5F3FF] border border-[#DDD6FE] rounded-xl px-4 py-2.5 mb-3 text-[13px] text-[#4338CA]">
-        Quick reference: size of each segment, observed churn rate (actual historical churners), average predicted churn probability from the XGBoost model, and the share classified as Persuadable (worth targeting with a retention campaign).
+        Quick reference: size of each segment, observed churn rate (actual historical churners), average predicted churn probability from the per-segment CatBoost model, and the share classified as Persuadable (worth targeting with a retention campaign).
       </div>
       <div className="bg-white rounded-2xl border-2 border-[#DDD6FE] overflow-hidden shadow-sm">
         <table className="w-full text-[14px]">
@@ -322,7 +325,7 @@ export function SegmentationClient({ summary, umap }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[13px]">
           {[
             ["Actual Churn Rate", "% of customers in this segment who actually churned in the historical dataset."],
-            ["Avg Predicted Prob", "Mean output of the XGBoost churn model for customers in this segment (0–100%)."],
+            ["Avg Predicted Prob", "Mean output of the per-segment CatBoost classifier for customers in this segment (0–100%). Calibrated with isotonic regression."],
             ["High Risk %", "% of the segment the model predicts has >60% probability of churning."],
             ["Persuadable %", "% of the segment where the T-S uplift model predicts a retention intervention would help."],
             ["UMAP", "Dimensionality reduction: 8+ behavioral features compressed to 2D for visualization while preserving cluster structure."],

@@ -73,7 +73,7 @@ export function UpliftClient({ kpis, typeSummary, roiBySeg, topPersuadables, sca
         <strong>What is uplift modelling?</strong> Standard churn models tell you <em>who will churn</em>. Uplift models tell you <em>who will change their mind if you intervene</em> — which is a completely different question. Someone who is 90% likely to churn but would leave regardless of your offer is not worth spending money on. Someone who is 60% likely to churn but would stay with the right intervention is worth a lot.
       </div>
       <div className="bg-[#F0FDF4] border-l-4 border-[#10B981] rounded-r-xl px-4 py-3 mb-6 text-[14px] text-[#14532D]">
-        <strong>The T–S Learner:</strong> We trained two separate XGBoost models — one on customers who received a past intervention, one on those who did not. Uplift Score = P(stay | intervene) − P(stay | no intervention). <strong>Positive uplift</strong> = intervention helps. <strong>Negative uplift</strong> = intervention backfires. The four customer types below are derived from this score.
+        <strong>The T–S Learner ensemble:</strong> Two causal ML models (T-Learner + S-Learner via CausalML) are trained — one on customers who received a past intervention, one on those who did not. Their predictions are averaged into the final Uplift Score = P(stay | intervene) − P(stay | no intervention). <strong>Positive uplift</strong> = intervention helps. <strong>Negative uplift</strong> = intervention backfires. The four customer types below are derived from this score.
       </div>
 
       {/* Customer type explainer cards */}
@@ -139,11 +139,17 @@ export function UpliftClient({ kpis, typeSummary, roiBySeg, topPersuadables, sca
           </div>
           <ChartCard>
             <ResponsiveContainer width="100%" height={340}>
-              <BarChart data={typeDistribution} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+              <BarChart data={typeDistribution} margin={{ top: 10, right: 20, left: 10, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E0E7FF" />
                 <XAxis dataKey="type" tick={{ fontSize: 12, fill: "#6B7280" }} />
-                <YAxis tick={{ fontSize: 12, fill: "#6B7280" }} />
-                <Tooltip contentStyle={{ borderRadius: "10px", border: "2px solid #DDD6FE", fontSize: 13 }} />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#6B7280" }}
+                  scale="log"
+                  domain={[1, "auto"]}
+                  allowDataOverflow
+                  tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
+                />
+                <Tooltip contentStyle={{ borderRadius: "10px", border: "2px solid #DDD6FE", fontSize: 13 }} formatter={(v) => [Number(v).toLocaleString(), "Customers"]} />
                 <Bar dataKey="count" name="Customers" radius={[5, 5, 0, 0]}>
                   {typeDistribution.map((d, i) => <Cell key={i} fill={d.color} />)}
                 </Bar>
@@ -178,35 +184,36 @@ export function UpliftClient({ kpis, typeSummary, roiBySeg, topPersuadables, sca
 
       <div className="h-8" />
 
-      {/* Top Persuadables table */}
-      <SectionHeading>Top 15 Persuadables by Net ROI — Campaign Priority List</SectionHeading>
+      {/* All Persuadables table */}
+      <SectionHeading>All Persuadables — Campaign Priority List ({topPersuadables.length} customers)</SectionHeading>
       <div className="bg-[#EEF2FF] border border-[#DDD6FE] rounded-xl px-4 py-2.5 mb-3 text-[13px] text-[#4338CA]">
-        These are the customers where a retention intervention is both <em>most likely to work</em> (positive uplift score) and <em>most financially valuable</em> (highest net ROI after intervention cost). Run your next campaign starting from the top of this list — it maximises return per dollar spent.
+        Every customer where an intervention is both likely to work (positive uplift) and financially justified (positive net ROI), ranked by net ROI. Run your campaign starting from rank 1.
       </div>
       <div className="bg-white rounded-2xl border-2 border-[#DDD6FE] overflow-hidden shadow-sm">
-        <table className="w-full text-[14px]">
-          <thead>
-            <tr style={{ background: "linear-gradient(110deg, #6366F1 0%, #A855F7 100%)" }}>
-              {["#", "Customer ID", "Segment", "Churn Prob", "Uplift Score", "Net ROI", "Priority Rank"].map((h) => (
-                <th key={h} className="text-white font-bold text-left px-4 py-3 text-[12px] uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {topPersuadables.map((c, i) => (
-              <tr key={c.customer_id} className={i % 2 === 0 ? "bg-white" : "bg-[#F5F3FF]"}>
-                <td className="px-4 py-2.5 text-[#9CA3AF] font-semibold">{i + 1}</td>
-                <td className="px-4 py-2.5 font-mono text-[13px] text-[#6366F1] font-semibold">{c.customer_id}</td>
-                <td className="px-4 py-2.5">{c.segment}</td>
-                <td className="px-4 py-2.5 font-semibold text-[#F43F5E]">{(c.churn_probability * 100).toFixed(1)}%</td>
-                <td className="px-4 py-2.5 font-semibold text-[#10B981]">{c.uplift_score >= 0 ? "+" : ""}{(c.uplift_score * 100).toFixed(2)}%</td>
-                <td className="px-4 py-2.5 font-bold text-[#6366F1]">${c.net_roi.toFixed(2)}</td>
-                <td className="px-4 py-2.5 text-[#6B7280]">{c.intervention_priority ?? "—"}</td>
+        <div className="overflow-y-auto" style={{ maxHeight: 520 }}>
+          <table className="w-full text-[14px]">
+            <thead className="sticky top-0 z-10">
+              <tr style={{ background: "linear-gradient(110deg, #6366F1 0%, #A855F7 100%)" }}>
+                {["#", "Customer ID", "Segment", "Churn Prob", "Uplift Score", "Net ROI", "Priority Rank"].map((h) => (
+                  <th key={h} className="text-white font-bold text-left px-4 py-3 text-[12px] uppercase tracking-wide">{h}</th>
+                ))}
               </tr>
-            ))}
-
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {topPersuadables.map((c, i) => (
+                <tr key={c.customer_id} className={i % 2 === 0 ? "bg-white" : "bg-[#F5F3FF]"}>
+                  <td className="px-4 py-2.5 text-[#9CA3AF] font-semibold">{i + 1}</td>
+                  <td className="px-4 py-2.5 font-mono text-[13px] text-[#6366F1] font-semibold">{c.customer_id}</td>
+                  <td className="px-4 py-2.5">{c.segment}</td>
+                  <td className="px-4 py-2.5 font-semibold text-[#F43F5E]">{(c.churn_probability * 100).toFixed(1)}%</td>
+                  <td className="px-4 py-2.5 font-semibold text-[#10B981]">{c.uplift_score >= 0 ? "+" : ""}{(c.uplift_score * 100).toFixed(2)}%</td>
+                  <td className="px-4 py-2.5 font-bold text-[#6366F1]">${c.net_roi.toFixed(2)}</td>
+                  <td className="px-4 py-2.5 text-[#6B7280]">{c.intervention_priority ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Glossary */}
@@ -220,7 +227,7 @@ export function UpliftClient({ kpis, typeSummary, roiBySeg, topPersuadables, sca
             ["Lost Cause", "High churn risk but intervention won't change the outcome. Save the budget."],
             ["Sleeping Dog", "Low churn risk but intervention might actually increase their churn probability. Leave them alone."],
             ["Net ROI", "Expected financial return per intervention: Uplift Score × Customer Lifetime Value (CLV) − Intervention Cost. Positive = financially justified."],
-            ["T-S Learner", "Two-model (Treatment-Subgroup) causal ML architecture. One XGBoost model trained on treated customers, one on control. Uplift = difference in predictions."],
+            ["T-S Learner Ensemble", "T-Learner + S-Learner causal ML ensemble (CausalML framework). Both models are averaged. T-Learner trains separate models per treatment group; S-Learner adds treatment as a feature. Uplift = difference in retention probability predictions."],
             ["Intervention Priority", "Ranked integer (1 = highest). Combines uplift score, churn probability, and net ROI into a single action queue."],
           ].map(([term, def]) => (
             <div key={term} className="flex gap-2">

@@ -16,7 +16,7 @@ export default async function UpliftPage() {
     getUpliftKpis().catch(() => EMPTY_KPIS),
     getCustomerTypeSummary().catch(() => []),
     getRoiBySegment().catch(() => []),
-    getTopPersuadables(15).catch(() => []),
+    getTopPersuadables(2000).catch(() => []),
     getUpliftScatterData().catch(() => []),
   ]);
   return (
