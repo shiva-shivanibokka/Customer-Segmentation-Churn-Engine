@@ -12,7 +12,7 @@
 
 - **What it does:** Segments customers behaviorally, predicts churn per cohort with calibrated probabilities, identifies the subset worth spending retention budget on (uplift modeling), and deploys a 12-tool ReAct AI agent that reasons over SHAP drivers, intervention history, and ROI before generating and saving a personalized retention plan.
 - **Hardest problem solved:** Replacing a naive "email everyone above 0.7 churn probability" approach with causal uplift modeling (CausalML T-Learner + S-Learner) to distinguish Persuadables from Lost Causes and Sleeping Dogs — the same targeting logic Uber open-sourced CausalML to solve.
-- **Verified results from pipeline runs:** CV AUC 0.945–0.984 across 5 segments; cluster stability mean ARI = 0.921 across 100 bootstrap resamplings; 710 Persuadables identified from 948 high-risk customers on the e-commerce dataset.
+- **Verified results from pipeline runs:** AUC 0.789–0.859 across 5 segments; cluster stability mean ARI = 0.886 across 100 bootstrap resamplings; 798 Persuadables identified from 39,725 high-risk customers on the Cell2Cell dataset.
 
 ---
 
@@ -99,7 +99,7 @@ flowchart TD
 **ML Pipeline**
 - 8 engineered composite features: `EngagementScore`, `RecencySignal`, `StickinessIndex`, `SpendTrend`, `SupportRiskScore`, `DiscountSensitivity`, `TenureStability`, `WarehouseFriction`
 - Schema validation with column presence and missing-rate checks before any transformation
-- Supports 3 datasets selectable via `--dataset` CLI flag: e-commerce (5,630 customers), Olist Brazilian marketplace (42,325), Cell2Cell telecom (~71,000)
+- Supports 3 datasets selectable via `--dataset` CLI flag: e-commerce (5,630 customers), Olist Brazilian marketplace (42,325), Cell2Cell telecom (~51,000)
 - K-Means++ with 5 clusters + GMM soft probability assignments (each customer gets a probability distribution across segments, not just a hard label)
 - Bootstrap cluster stability: Adjusted Rand Index across 100 resamplings with a pass/warn/fail grading scheme
 - Per-segment CatBoost classifiers with stratified 80/20 holdout and 5-fold cross-validation
@@ -301,19 +301,19 @@ KAGGLE_KEY=your-api-key
 
 ## Usage Examples
 
-**Pipeline output after `python src/pipeline.py`:**
+**Pipeline output after `python src/pipeline.py --dataset cell2cell`:**
 
 ```
-[Stage 1] Feature Engineering — 5,630 customers, 8 composite features
-[Stage 2] Segmentation — k=5, stability mean ARI=0.921 (Highly Stable)
-[Stage 3] Churn Prediction — per-segment CatBoost, AUC 0.945–0.984
-[Stage 4] Uplift Modeling — 710 Persuadables, 238 Lost Causes
+[Stage 1] Feature Engineering — 51,047 customers, 8 composite features
+[Stage 2] Segmentation — k=5, stability mean ARI=0.886 (Highly Stable)
+[Stage 3] Churn Prediction — per-segment CatBoost, AUC 0.789–0.859
+[Stage 4] Uplift Modeling — 798 Persuadables, 38,927 Lost Causes
 
 CustomerType distribution:
-  Sure Thing      4,151
-  Persuadable       710
-  Lost Cause        238
-  Sleeping Dog       531
+  Lost Cause      38,927
+  Sleeping Dog    11,088
+  Persuadable        798
+  Sure Thing         234
 ```
 
 **Classify a customer programmatically (from `uplift_model.py`):**
@@ -472,22 +472,22 @@ The Dockerfile uses `python:3.12-slim`, runs as a non-root user, and includes a 
 
 ## Results
 
-All numbers below come from running the pipeline on the default e-commerce dataset (5,630 customers). They are reproducible by running `python src/pipeline.py`.
+All numbers below come from running the pipeline on the Cell2Cell dataset (51,047 customers). They are reproducible by running `python src/pipeline.py --dataset cell2cell`.
 
 | Metric | Value |
 |---|---|
-| Cluster stability (bootstrap ARI, 100 resamplings) | 0.921 — "Highly Stable" |
-| CV AUC range across 5 segments | 0.945 – 0.984 |
-| Persuadables identified (of 948 high-risk customers) | 710 |
-| Lost Causes avoided | 238 |
+| Cluster stability (bootstrap ARI, 100 resamplings) | 0.886 — "Highly Stable" |
+| AUC range across 5 segments | 0.789 – 0.859 |
+| Persuadables identified (of 39,725 high-risk customers) | 798 |
+| Lost Causes identified | 38,927 |
 
-| Segment | Customers | Churn Rate | CV AUC |
+| Segment | Customers | Churn Rate | AUC |
 |---|---|---|---|
-| At-Risk | 1,228 | 23.1% | 0.982 |
-| Lapsed | 1,482 | 6.3% | 0.974 |
-| Price Sensitive | 889 | 40.4% | 0.945 |
-| Champions | 734 | 12.8% | 0.976 |
-| Loyal Customers | 1,297 | 9.0% | 0.984 |
+| At-Risk | 8,400 | 26.4% | 0.859 |
+| Champions | 8,153 | 23.9% | 0.859 |
+| Lapsed | 11,975 | 33.3% | 0.793 |
+| Loyal Customers | 9,553 | 28.0% | 0.816 |
+| Price Sensitive | 12,966 | 30.0% | 0.789 |
 
 ---
 
