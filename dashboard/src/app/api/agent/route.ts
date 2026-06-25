@@ -3,10 +3,10 @@ import GroqClient from "groq-sdk";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "groq-sdk/resources/chat/completions";
 import { createClient } from "@supabase/supabase-js";
 
-const groq = new GroqClient({ apiKey: process.env.GROQ_API_KEY });
+const groq = new GroqClient({ apiKey: process.env.GROQ_API_KEY || "" });
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
 );
 
 const MODEL = "qwen-qwq-32b";

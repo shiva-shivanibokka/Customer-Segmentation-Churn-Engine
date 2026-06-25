@@ -5,9 +5,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SegmentationPage() {
   const [summary, umap, customers] = await Promise.all([
-    getSegmentSummary(),
-    getUmapData(),
-    getCustomers(),
+    getSegmentSummary().catch(() => []),
+    getUmapData().catch(() => []),
+    getCustomers().catch(() => []),
   ]);
   return <SegmentationClient summary={summary} umap={umap} customers={customers} />;
 }

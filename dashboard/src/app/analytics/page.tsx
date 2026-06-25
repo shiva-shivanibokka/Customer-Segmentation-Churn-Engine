@@ -1,7 +1,7 @@
 import { getRetentionActions, getAuditSummary } from "@/lib/data";
 import { AnalyticsClient } from "@/components/pages/analytics-client";
 
-export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 const EMPTY_SUMMARY = { total: 0, retained: 0, churned: 0, pending: 0, byType: [], bySeg: [] };
 
