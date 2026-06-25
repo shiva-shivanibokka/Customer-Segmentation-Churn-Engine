@@ -216,6 +216,32 @@ export async function getRetentionActions(limit = 200): Promise<RetentionAction[
   return (actions ?? []).map((a) => ({ ...a, outcome: fbMap[a.id] ?? null })) as RetentionAction[];
 }
 
+export async function saveRetentionAction(
+  customer: { customer_id: string; segment: string; churn_probability: number; uplift_score: number; net_roi: number },
+  plan: Record<string, unknown>,
+  trace: unknown[]
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("retention_actions")
+    .insert({
+      customer_id: customer.customer_id,
+      segment: customer.segment,
+      churn_probability: customer.churn_probability,
+      uplift_score: customer.uplift_score,
+      net_roi: customer.net_roi,
+      intervention_type: plan.intervention_type ?? null,
+      channel: plan.channel ?? null,
+      timing: plan.timing ?? null,
+      message_framing: plan.message_framing ?? null,
+      agent_reasoning: trace,
+      agentic_mode: true,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return (data as { id: string }).id;
+}
+
 export async function saveFeedback(retentionActionId: string, customerId: string, outcome: string) {
   const { error } = await supabase.from("intervention_feedback").insert({
     id: crypto.randomUUID(),
