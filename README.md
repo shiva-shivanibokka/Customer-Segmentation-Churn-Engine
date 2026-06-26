@@ -5,6 +5,9 @@
 ![CI](https://github.com/shiva-shivanibokka/Churn-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Docker](https://img.shields.io/badge/docker-build-passing)
+![Deployed](https://img.shields.io/badge/dashboard-live%20on%20Vercel-black)
+
+**Live dashboard:** [customer-segmentation-churn.vercel.app](https://customer-segmentation-churn.vercel.app/retention)
 
 ---
 
@@ -466,7 +469,11 @@ docker run -p 8501:8501 --env-file .env churn-engine
 
 The Dockerfile uses `python:3.12-slim`, runs as a non-root user, and includes a Streamlit healthcheck. CI builds the image on every push (gated on tests passing) but does not push to a registry or deploy anywhere.
 
-**Not yet deployed to a cloud provider.** The system is designed to be deployable to any Docker-compatible platform (Railway, Render, Fly.io, AWS ECS, GCP Cloud Run). The Next.js dashboard is compatible with Vercel, with one note: environment variables must be set on the platform directly — the root `.env` trick that works locally doesn't apply in cloud deployments.
+**Next.js dashboard is live on Vercel:** [customer-segmentation-churn.vercel.app](https://customer-segmentation-churn.vercel.app/retention)
+
+The dashboard is deployed via `dashboard/vercel.json` with a 60-second function timeout on the AI agent route. Environment variables (Supabase keys, Groq API key) are set directly on the Vercel project — the root `.env` trick that works locally doesn't apply in cloud deployments.
+
+**FastAPI scoring endpoint is not yet deployed.** The ML serving API (`/health`, `/readiness`, `/score`) runs locally or via Docker. It is designed to deploy to any Docker-compatible platform (Railway, Render, Fly.io, AWS ECS, GCP Cloud Run).
 
 ---
 
@@ -494,7 +501,7 @@ All numbers below come from running the pipeline on the Cell2Cell dataset (51,04
 ## Roadmap / Known Limitations
 
 - **Observational uplift, not experimental.** The uplift models use behavioral proxies as treatment indicators (`Complain`, `CouponUsed`) rather than actual A/B test data. This is a documented limitation — production systems train uplift models on randomized experiment logs. The classification thresholds (`uplift ≥ 0.05`, `churn_prob ≥ 0.30`) are tunable via `classify_customer_type()` arguments.
-- **No cloud deployment.** The pipeline artifacts (`data/processed/`, `models/`) are committed to git so the dashboard runs without retraining, but the system isn't deployed to a cloud provider. Next step: container push to a registry + cloud run deployment.
+- **Backend not yet deployed.** The Next.js dashboard is live on Vercel; the FastAPI scoring endpoint is local/Docker only. Next step: container push to a registry + cloud run deployment for the ML serving API.
 - **No frontend test suite.** The Next.js dashboard has no automated tests. `tsc --noEmit` passes, but component behavior is untested.
 - **Groq free-tier rate limits.** The AI agent uses Groq's free tier (100,000 tokens/day). Sustained multi-user usage would require a paid tier or model-switching logic.
 - **Single-tenant Supabase setup.** Row Level Security is enabled but the current RLS policies are not documented. Multi-tenant use would require policy review.
