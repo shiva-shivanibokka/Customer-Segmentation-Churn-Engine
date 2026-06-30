@@ -242,6 +242,11 @@ In your Supabase SQL editor, run `supabase/config_tables.sql` to create the `ret
 
 The `customers`, `retention_actions`, and `intervention_feedback` tables should be created to match the schema in `dashboard/src/lib/supabase.ts`.
 
+Then run, in order:
+
+1. `supabase/rpc_functions.sql` — creates the 10 `SECURITY DEFINER` aggregation functions the dashboard calls.
+2. `supabase/rls_policies.sql` — **enables Row-Level Security** on all five tables and adds the access policies (anon read-only + feedback insert; service-role bypasses RLS for server-side writes). This is required: the dashboard ships the public anon key in the browser, so without RLS that key would grant anyone full read/write/delete on your data.
+
 ### 4. Launch the dashboard
 
 ```bash
@@ -504,7 +509,7 @@ All numbers below come from running the pipeline on the Cell2Cell dataset (51,04
 - **FastAPI scoring endpoint not cloud-deployed.** The dashboard and AI agent are fully deployed (Vercel + Supabase). The FastAPI `/score` endpoint is a standalone tool for programmatic scoring outside the dashboard — it runs locally or via Docker but is not required for the deployed system.
 - **No frontend test suite.** The Next.js dashboard has no automated tests. `tsc --noEmit` passes, but component behavior is untested.
 - **Groq free-tier rate limits.** The AI agent uses Groq's free tier (100,000 tokens/day). Sustained multi-user usage would require a paid tier or model-switching logic.
-- **Single-tenant Supabase setup.** Row Level Security is enabled but the current RLS policies are not documented. Multi-tenant use would require policy review.
+- **Single-tenant Supabase setup.** Row Level Security is enabled and the policies are version-controlled in `supabase/rls_policies.sql` (anon read-only + feedback insert; service-role for server-side writes). The current policies treat all data as a single shared tenant — multi-tenant use would require per-tenant scoping in the policy predicates.
 
 ---
 
